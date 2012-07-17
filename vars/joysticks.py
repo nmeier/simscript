@@ -121,7 +121,7 @@ class Joysticks:
         
         if not Joysticks._sdl: 
             try:
-                Joysticks._sdl = CDLL(os.path.join("..","contrib","sdl","SDL.dll"))
+                Joysticks._sdl = CDLL(os.path.join("contrib","sdl","SDL.dll"))
                 Joysticks._sdl.SDL_Init(0x200)
                 Joysticks._sdl.SDL_JoystickName.restype = c_char_p
                 for j in range(0, Joysticks._sdl.SDL_NumJoysticks()) :
@@ -132,7 +132,7 @@ class Joysticks:
                 
         if not Joysticks._vjoy: 
             try:
-                Joysticks._vjoy = CDLL(os.path.join("..", "contrib", "vjoy", "vJoyInterface.dll"))
+                Joysticks._vjoy = CDLL(os.path.join("contrib", "vjoy", "vJoyInterface.dll"))
                 
                 if not Joysticks._vjoy.vJoyEnabled():
                     Joysticks._log.info("No Virtual Joystick Driver active")
@@ -176,3 +176,5 @@ class Joysticks:
         # poll
         Joysticks._sdl.SDL_JoystickUpdate()
     
+def init():
+    return Joysticks()

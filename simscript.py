@@ -2,12 +2,26 @@
 
 """ siminputs main script - automation of virtual inputs for simulators """
 
-import runpy,sys,os,time,logging,traceback,joysticks,phidgets,getopt,Phidgets
+import runpy,sys,os,time,logging,traceback,getopt
+
+def classbyname(name):
+    parts = name.split('.')
+    m = __import__(".".join(parts[:-1]))
+    for p in parts[1:]:
+        m = getattr(m, p)            
+    return m
+
+def modulo(value,start,end):
+    if value!=value: #NaN check
+        return value
+    value = (value - start) % (end-start)
+    value = start+value if value>=0 else end+value
+    return value
 
 def main(argv):
 
     def usage(detail=None):
-        print("Usage: main.py -d|--debug scriptname")
+        print("Usage: %s -d|--debug scriptname" % os.path.split(argv[0])[1])
         if detail: print("***",detail)
         return 1
 
@@ -15,7 +29,7 @@ def main(argv):
     level = logging.INFO
     hertz = 50
     try:
-        opts, args =  getopt.getopt(argv, "h:d", ["hertz=","debug"])
+        opts, args =  getopt.getopt(argv[1:], "h:d", ["hertz=","debug"])
         for opt, arg in opts:
             if opt in ("-d", "--debug"):
                 level = logging.DEBUG
@@ -28,18 +42,19 @@ def main(argv):
     # script to run
     if len(args) != 1: 
         return usage()
-    script = args[0] + '.py'   
-    scripts = os.path.abspath(os.path.join("..","scripts"))
-    sys.path.append(scripts)
+    scriptName = args[0]
+    scriptFile = scriptName + '.py'   
+    scriptDir = os.path.abspath("scripts")
+    sys.path.append(scriptDir)
     
-    if not os.path.exists(os.path.join(scripts, script)):
-        return usage("%s not found in %s" % (script, scripts))
+    if not os.path.exists(os.path.join(scriptDir, scriptFile)):
+        return usage("%s not found in %s" % (scriptFile, scriptDir))
 
     # logging 
     logging.basicConfig(level=level, stream=sys.stdout)
-    log = logging.getLogger("falconvjoy")
+    log = logging.getLogger(os.path.split(argv[0])[1])
 
-    # globals
+    # scriptvariables
     class State(dict):
         def __missing__(self, key):
             return None
@@ -57,41 +72,43 @@ def main(argv):
                 return False
             return value
 
-    scriptState = State()
+    scriptVars = dict();
+    scriptVars['log'] = logging.getLogger(scriptFile)
+    scriptVars['state'] = State()
     
-    scriptGlobals = dict();
-    scriptGlobals['joysticks'] = joysticks.Joysticks() 
-    scriptGlobals['phidgets'] = phidgets.Phidgets()
-    scriptGlobals['log'] = logging.getLogger(script)
-    scriptGlobals['state'] = scriptState
-
+    # ... all IO modules
+    sys.path.append("contrib")
+    sys.path.append("vars")
+    for py in os.listdir("vars"):
+        if not py.endswith("py"): continue
+        mod = os.path.splitext(py)[0]
+        scriptVars[mod] = __import__(mod).init()
+    
     # loop
     lastError = 0
     while True:
   
         sync = (time.clock()+(1/hertz))
         
-        for g in scriptGlobals.values(): 
+        for g in scriptVars.values(): 
             try:
                 g.poll()
             except:
                 pass
     
-        modified = os.path.getmtime(os.path.join(scripts, script))
+        modified = os.path.getmtime(os.path.join(scriptDir, scriptFile))
             
         try:
-            runpy.run_module(script[:-3], scriptGlobals)
+            runpy.run_module(scriptName, scriptVars)
         except EnvironmentError as err:
             if lastError < modified:
-                log.warning("script failed with %s" % err)
+                log.warning("scriptFile failed with %s" % err)
                 lastError = modified
         except StopIteration:
             pass
-        except Phidgets.PhidgetException.PhidgetException as pex:
-            log.debug("script failed with PhidgetException: %s" % pex.details )
         except Exception as ex:
             if lastError < modified:
-                log.warning("script failed with %s %s" % (ex, traceback.format_exc()) )
+                log.warning("scriptFile failed with %s %s" % (ex, traceback.format_exc()) )
                 lastError = modified
             
         wait = sync-time.clock()
@@ -99,12 +116,12 @@ def main(argv):
             time.sleep(wait)
         else:  
             if not __debug__:
-                log.warning("script executions took longer than sync frequency (%dms>%dms)" % ( (1/hertz-wait)*1000, 1/hertz*1000))
+                log.warning("scriptFile executions took longer than sync frequency (%dms>%dms)" % ( (1/hertz-wait)*1000, 1/hertz*1000))
                 
     # when we bail the loop
     return 0    
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))
+    sys.exit(main(sys.argv))
 

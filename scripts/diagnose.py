@@ -1,7 +1,5 @@
 '''
-Created on 2011-02-26
-
-@author: Nils
+Diagnoses available simulator input and outputs 
 '''
 
 # debug joysticks
@@ -34,10 +32,10 @@ for p in phidgets.all():
     
     if not p.isAttached(): continue
     
-    type = p.getDeviceType() 
+    dtype = p.getDeviceType() 
     
     # encoder
-    if type == 'PhidgetEncoder':
+    if dtype == 'PhidgetEncoder':
         
         key = "phidgets.get('%s').getInputState(0)" % p.getSerialNum()
         now = p.getInputState(0)

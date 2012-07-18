@@ -82,7 +82,10 @@ def main(argv):
     for py in os.listdir("vars"):
         if not py.endswith("py"): continue
         mod = os.path.splitext(py)[0]
-        scriptVars[mod] = __import__(mod).init()
+        try:
+            scriptVars[mod] = __import__(mod).init()
+        except:
+            log.warning("Couldn't initialize var %s: %s" % (mod, traceback.format_exc()) )
     
     # loop
     lastError = 0

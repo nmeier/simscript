@@ -28,7 +28,7 @@ for p in phidgets.all():
     
     if not p.isAttached(): continue
     
-    dtype = p.getDeviceType() 
+    dtype = p.getDeviceType().decode("utf-8") 
     
     # encoder
     if dtype == 'PhidgetEncoder':

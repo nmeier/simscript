@@ -1,6 +1,6 @@
 ''' Joystick abstraction layer '''
 
-from ctypes import CDLL, byref, c_void_p, c_char_p, c_long, c_bool, c_ubyte, c_short
+from ctypes import CDLL, Structure, byref, c_void_p, c_char_p, c_long, c_bool, c_ubyte, c_short, c_byte
 import logging,traceback,os.path
 
 class Joystick:
@@ -67,39 +67,63 @@ class VirtualJoystick:
     _HID_USAGE_SL0 = 0x36
     _HID_USAGE_SL1 = 0x37
     _HID_USAGE_WHL = 0x38
-    _HID_USAGE_POV = 0x39
     
-    _usableAxis = [_HID_USAGE_X, _HID_USAGE_Y, _HID_USAGE_Z, _HID_USAGE_RX, _HID_USAGE_RY, _HID_USAGE_RZ, _HID_USAGE_SL0, _HID_USAGE_SL1, _HID_USAGE_WHL]
+    _axisKeys = [_HID_USAGE_X, _HID_USAGE_Y, _HID_USAGE_Z, _HID_USAGE_RX, _HID_USAGE_RY, _HID_USAGE_RZ, _HID_USAGE_SL0, _HID_USAGE_SL1, _HID_USAGE_WHL]
     
-    class Axis:
-        def __init__(self, akey, amin, amax):
-            self._akey = akey
-            self._amin = amin
-            self._aval = 0
-            self._amax = amax
+
+    class Position(Structure):
+        _fields_ = [
+          ("index", c_byte),
+          ("wThrottle", c_long),
+          ("wRudder", c_long),
+          ("wAileron", c_long),
+          ("wAxisX", c_long),
+          ("wAxisY", c_long),
+          ("wAxisZ", c_long),
+          ("wAxisXRot", c_long), 
+          ("wAxisYRot", c_long),
+          ("wAxisZRot", c_long),
+          ("wSlider", c_long),
+          ("wDial", c_long),
+          ("wWheel", c_long),
+          ("wAxisVX", c_long),
+          ("wAxisVY", c_long),
+          ("wAxisVZ", c_long),
+          ("wAxisVBRX", c_long), 
+          ("wAxisVBRY", c_long),
+          ("wAxisVBRZ", c_long),
+          ("lButtons", c_long),  # 32 buttons: 0x00000001 to 0x80000000 
+          ("bHats", c_long),     # Lower 4 bits: HAT switch or 16-bit of continuous HAT switch
+          ("bHatsEx1", c_long),  # Lower 4 bits: HAT switch or 16-bit of continuous HAT switch
+          ("bHatsEx2", c_long),  # Lower 4 bits: HAT switch or 16-bit of continuous HAT switch
+          ("bHatsEx3", c_long)   # Lower 4 bits: HAT switch or 16-bit of continuous HAT switch
+          ]
+    
 
     def __init__(self, joysticks, joystick, virtualIndex):
         self.index = joystick.index
         self.name = joystick.name
         
-        self._virtualIndex = virtualIndex
+        self._position = VirtualJoystick.Position()
+        self._position.index = virtualIndex+1
+        
         self._acquired = False
 
-        self._buttons = [0] * Joysticks._vjoy.GetVJDButtonNumber(virtualIndex+1)
-        self._axis = []
+        self._buttons = Joysticks._vjoy.GetVJDButtonNumber(self._position.index)
         
-        for a in VirtualJoystick._usableAxis:
-            amax = c_long()
-            amin = c_long()
-            if Joysticks._vjoy.GetVJDAxisExist(virtualIndex+1, a):
-                Joysticks._vjoy.GetVJDAxisMin(virtualIndex+1, a, byref(amin))
-                Joysticks._vjoy.GetVJDAxisMax(virtualIndex+1, a, byref(amax))
-                self._axis.append(VirtualJoystick.Axis(a,amin.value,amax.value)) 
+        self._axis = []
+        for akey in VirtualJoystick._axisKeys:
+            if Joysticks._vjoy.GetVJDAxisExist(self._position.index, akey):
+                amax = c_long()
+                amin = c_long()
+                Joysticks._vjoy.GetVJDAxisMin(self._position.index, akey, byref(amin))
+                Joysticks._vjoy.GetVJDAxisMax(self._position.index, akey, byref(amax))
+                self._axis.append((akey, amin.value,amax.value)) 
                 
     def _acquire(self):
         if self._acquired:
             return
-        if Joysticks._vjoy.GetVJDStatus(self._virtualIndex+1) != VirtualJoystick._VJD_STAT_FREE:
+        if not Joysticks._vjoy.AcquireVJD(self._position.index):
             raise EnvironmentError("joysticks.get('%s') is not a free Virtual Joystick" % self.index)
         self._acquired = True
                 
@@ -114,12 +138,14 @@ class VirtualJoystick:
     def setAxis(self, a, value):
         if a<0 or a>=len(self._axis):
             raise EnvironmentError("joysticks.get('%s') doesn't have axis %d" % a)
-        axis = self._axis[a]
-        if value < axis._amin or value > axis._amax:
-            raise EnvironmentError("joysticks.get('%s') value for axis %d not %d > %d > %d" % (self._virtualIndex, a, axis._amin, value, axis._amax))
+        akey, amin, amax = self._axis[a]
+        if value < amin or value > amax:
+            raise EnvironmentError("joysticks.get('%s') value for axis %d not %d > %d > %d" % (self.index, a, amin, value, amax))
+        '''
         if not Joysticks._vjoy.SetAxis(value, self._virtualIndex+1, axis._akey):
-            raise EnvironmentError("joysticks.get('%s') axis %d can't be set to %d" % (self._virtualIndex, a, value))
-        axis._aval = value
+            raise EnvironmentError("joysticks.get('%s') axis %d can't be set to %d" % (self.index, a, value))
+        '''
+        
     
     def numButtons(self):
         return len(self._buttons)
@@ -130,11 +156,20 @@ class VirtualJoystick:
         return self._buttons[i]
     
     def setButton(self, i, value):
+
+        self._position.wAxisX = 30000
+        self._position.__setattr__('wAxisY', 30000) 
+        self._position.lButtons = 2
+        if not Joysticks._vjoy.UpdateVJD(self._position.index, byref(self._position)):
+            raise EnvironmentError("joysticks.get('%s') button %d can't be set to %d" % (self.index, i, value))
+
+        '''        
         if i<0 or i>=len(self._buttons):
             raise EnvironmentError("joysticks.get('%s') doesn't have button  %d" % i)
         if not Joysticks._vjoy.SetBtn(c_bool(value), c_short(self._virtualIndex+1), c_ubyte(i+1)):
             raise EnvironmentError("joysticks.get('%s') button %d can't be set to %d" % (self._virtualIndex, i, value))
         self._buttons[i] = value
+        '''
         return True
     
     def __str__(self):

@@ -73,20 +73,20 @@ def main(argv):
             return value
 
     scriptVars = dict();
-    scriptVars['log'] = logging.getLogger(scriptFile)
     scriptVars['state'] = State()
-    scriptVars['math'] = __import__("math")
     
-    # ... all IO modules
+    # ... load all modules
+    modules = []
     sys.path.append("contrib")
-    sys.path.append("vars")
-    for py in os.listdir("vars"):
+    sys.path.append("modules")
+    for py in os.listdir("modules"):
         if not py.endswith("py"): continue
         mod = os.path.splitext(py)[0]
         try:
-            scriptVars[mod] = __import__(mod).init()
-        except:
-            log.warning("Couldn't initialize var %s: %s" % (mod, traceback.format_exc()) )
+            modules.append(__import__(mod))
+        except Exception as e:
+            log.warning("Couldn't initialize module %s: %s" % (mod, e) )
+            log.debug(traceback.format_exc())
     
     # loop
     lastError = 0
@@ -94,11 +94,8 @@ def main(argv):
   
         sync = (time.clock()+(1/hertz))
         
-        for g in scriptVars.values(): 
-            try:
-                g.poll()
-            except:
-                pass
+        for mod in modules: 
+            mod.sync()
     
         modified = os.path.getmtime(os.path.join(scriptDir, scriptFile))
             

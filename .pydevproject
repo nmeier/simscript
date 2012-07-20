@@ -7,7 +7,7 @@
 <pydev_pathproperty name="org.python.pydev.PROJECT_SOURCE_PATH">
 <path>/simscript</path>
 <path>/simscript/contrib</path>
-<path>/simscript/vars</path>
 <path>/simscript/scripts</path>
+<path>/simscript/modules</path>
 </pydev_pathproperty>
 </pydev_project>

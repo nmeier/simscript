@@ -11,3 +11,9 @@
 #   Map Push Button (Missile Uncage)
 #   Map Rotation to Axis (Missile Acquisition Sound Level)
 #
+import joysticks, state, log
+
+log.info("Hello %s", "Du")
+
+joysticks.numJoysticks()
+#print("%d joysticks" % joysticks.numJoysticks())

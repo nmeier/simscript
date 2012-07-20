@@ -11,8 +11,3 @@
 #   Map Push Button (Missile Uncage)
 #   Map Rotation to Axis (Missile Acquisition Sound Level)
 #
-
-vjoy = joysticks.get("vJoy Device")
-
-vjoy.setAxis(0,16000)
-vjoy.setButton(0,True)

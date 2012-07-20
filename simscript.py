@@ -75,6 +75,7 @@ def main(argv):
     scriptVars = dict();
     scriptVars['log'] = logging.getLogger(scriptFile)
     scriptVars['state'] = State()
+    scriptVars['math'] = __import__("math")
     
     # ... all IO modules
     sys.path.append("contrib")
@@ -105,13 +106,13 @@ def main(argv):
             runpy.run_module(scriptName, scriptVars)
         except EnvironmentError as err:
             if lastError < modified:
-                log.warning("scriptFile failed with %s" % err)
+                log.warning("%s failed with %s" % (scriptFile,err))
                 lastError = modified
         except StopIteration:
             pass
         except Exception as ex:
             if lastError < modified:
-                log.warning("scriptFile failed with %s %s" % (ex, traceback.format_exc()) )
+                log.warning("%s failed with %s %s" % (scriptFile, ex, traceback.format_exc()) )
                 lastError = modified
             
         wait = sync-time.clock()
@@ -119,7 +120,7 @@ def main(argv):
             time.sleep(wait)
         else:  
             if not __debug__:
-                log.warning("scriptFile executions took longer than sync frequency (%dms>%dms)" % ( (1/hertz-wait)*1000, 1/hertz*1000))
+                log.warning("%s executions took longer than sync frequency (%dms>%dms)" % ( scriptFile, (1/hertz-wait)*1000, 1/hertz*1000))
                 
     # when we bail the loop
     return 0    

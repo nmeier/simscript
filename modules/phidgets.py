@@ -21,11 +21,12 @@ class __PhidgetWrapper:
 
 def init():
 
-    global _log, _serial2phidgets, _manager
+    global _log, _serial2phidgets, _manager, _encoderAxisLower
         
     _log = logging.getLogger("phidgets")
     _serial2phidgets = dict()
-    
+    _encoderAxisLower = dict()
+
     PhidgetException.__str__ = lambda self: self.details
     
     try:
@@ -94,6 +95,30 @@ def flatten(phidget):
 
 def sync():
     pass
+
+''' 
+    l<v<u returns l<v<u
+    l<u<v returns l<v=u
+    v<l<u returns l=v<u
+'''
+def _rerange(lower, value, upper):
+    if value>upper:
+        return value-(upper-lower), value, value
+    elif value<lower:
+        return value, value, value+(upper-lower)
+    return lower, value, upper
+
+def encoder2axis(encoder, revolutions=1):
+    pos = encoder.getPosition(0)
+    lower = _encoderAxisLower.get(encoder, pos)
+    upper = lower + int(revolutions*80)
+
+    lower, pos, upper = _rerange(lower, pos, upper)
+    
+    _encoderAxisLower[encoder] = lower
+    
+    return (pos-lower) / (upper-lower) * 2 - 1
+
 
 init()
     

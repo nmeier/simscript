@@ -10,26 +10,17 @@
 #   Map Push Button into Button (Missile Uncage)
 #   Map Rotation into Axis (Missile Acquisition Sound Level)
 #
-import joysticks, phidgets, state
-
-def pos2axis(key, pos, ticks=80):
-    left, right = state.get(key, (pos, pos+ticks))
-    if pos>right:
-        left,right = pos-ticks,pos
-    elif pos<left:
-        left,right = pos,pos+ticks
-    state.set(key, (left,right))
-    return (pos-left) / (right-left) * 2 - 1
+import joysticks, phidgets
 
 # encoder 1 for axis and button
 encoder1 = phidgets.get(82141)
 vjoy = joysticks.get('vJoy Device')
-vjoy.setAxis(0, pos2axis("leftright", -encoder1.getPosition(0), 160))
+vjoy.setAxis(0, phidgets.encoder2axis(encoder1, 2))
 vjoy.setButton(0, encoder1.getInputState(0))
 
 # encoder 2 for axis and button
 encoder2 = phidgets.get(82081)
-vjoy.setAxis(1, pos2axis("updown", -encoder2.getPosition(0), 160))
+vjoy.setAxis(1, phidgets.encoder2axis(encoder2, 1))
 vjoy.setButton(1, encoder2.getInputState(0))
 
 # saitek axis 3 into 2 buttons

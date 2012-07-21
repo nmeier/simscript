@@ -12,7 +12,7 @@ class Joystick:
                 index = nameOrIndex
         else: 
             for j in range(0, numJoysticks()) :
-                if nameOrIndex == str(__sdl.SDL_JoystickName(j), "utf-8"):
+                if nameOrIndex == str(_sdl.SDL_JoystickName(j), "utf-8"):
                     index = j
 
         try:    
@@ -21,27 +21,33 @@ class Joystick:
             raise EnvironmentError("joysticks.get('%s') is not available" % nameOrIndex)
 
         self._handle = c_void_p()
-        self.name = str(__sdl.SDL_JoystickName(self.index), "utf-8")
+        self.name = str(_sdl.SDL_JoystickName(self.index), "utf-8")
         
     def _acquire(self):
         if self._handle:
             return
-        self._handle = __sdl.SDL_JoystickOpen(self.index)
+        self._handle = _sdl.SDL_JoystickOpen(self.index)
         if not self._handle:
             raise EnvironmentError("joysticks.get('%s') can't be acquired" % self.index)
             
         
     def numAxis(self):
-        return __sdl.SDL_JoystickNumAxes(self._handle) if self._handle else 0
+        return _sdl.SDL_JoystickNumAxes(self._handle) if self._handle else 0
 
     def getAxis(self, i):
-        return __sdl.SDL_JoystickGetAxis(self._handle, i) / 32767  if self._handle else 0
+        return _sdl.SDL_JoystickGetAxis(self._handle, i) / 32767  if self._handle else 0
+    
+    def setAxis(self, a, value):
+        raise EnvironmentError("%s is not a virtual voystick" % self.name)
     
     def numButtons(self):
-        return __sdl.SDL_JoystickNumButtons(self._handle)  if self._handle else 0
+        return _sdl.SDL_JoystickNumButtons(self._handle)  if self._handle else 0
     
     def getButton(self, i):
-        return __sdl.SDL_JoystickGetButton(self._handle, i)  if self._handle else False
+        return _sdl.SDL_JoystickGetButton(self._handle, i)  if self._handle else False
+    
+    def setButton(self, b, value):
+        raise EnvironmentError("%s is not a virtual voystick" % self.name)
     
     def _sync(self):
         pass
@@ -96,7 +102,7 @@ class VirtualJoystick:
           ]
     
 
-    def __init__(self, joysticks, joystick, virtualIndex):
+    def __init__(self, joystick, virtualIndex):
         self.index = joystick.index
         self.name = joystick.name
         
@@ -105,22 +111,22 @@ class VirtualJoystick:
         
         self._acquired = False
 
-        self._buttons = __vjoy.GetVJDButtonNumber(self._position.index)
+        self._buttons = _vjoy.GetVJDButtonNumber(self._position.index)
         
         self._axis = []
         for akey, pkey in VirtualJoystick._AXIS_KEYS:
-            if __vjoy.GetVJDAxisExist(self._position.index, akey):
+            if _vjoy.GetVJDAxisExist(self._position.index, akey):
                 amax = c_long()
                 amin = c_long()
-                __vjoy.GetVJDAxisMin(self._position.index, akey, byref(amin))
-                __vjoy.GetVJDAxisMax(self._position.index, akey, byref(amax))
+                _vjoy.GetVJDAxisMin(self._position.index, akey, byref(amin))
+                _vjoy.GetVJDAxisMax(self._position.index, akey, byref(amax))
                 self._axis.append((pkey, amin.value,amax.value))
                 self._position.__setattr__(pkey, int(amin.value + (amax.value-amin.value)/2)) 
                 
     def _acquire(self):
         if self._acquired:
             return
-        if not __vjoy.AcquireVJD(self._position.index):
+        if not _vjoy.AcquireVJD(self._position.index):
             raise EnvironmentError("joysticks.get('%s') is not a free Virtual Joystick" % self.index)
         self._acquired = True
                 
@@ -158,25 +164,27 @@ class VirtualJoystick:
             self._position.lButtons &= ~(1<<i)
         
     def _sync(self):
-        if not __vjoy.UpdateVJD(self._position.index, byref(self._position)):
-            __log.warning("joysticks.get('%s') couldn't be set" % self.name)
+        if not self._acquired:
+            return
+        if not _vjoy.UpdateVJD(self._position.index, byref(self._position)):
+            _log.warning("joysticks.get('%s') couldn't be set" % self.name)
     
     def __str__(self):
         return "joysticks.get('%s') # VirtualJoystick index %d" % (self.name, self.index)
      
 def numJoysticks():
-    if not __sdl:
+    if not _sdl:
         return 0
-    return max(__sdl.SDL_NumJoysticks(), len(__joysticks))
+    return max(_sdl.SDL_NumJoysticks(), len(_joysticks))
 
 def get(nameOrIndex):
     try:
-        joy = __name2joystick[nameOrIndex]
+        joy = _name2joystick[nameOrIndex]
     except:
         joy = Joystick(nameOrIndex)
-        __name2joystick.__joysticks.append(joy)
-        __name2joystick[joy.index] = joy
-        __name2joystick[joy.name] = joy 
+        _name2joystick._joysticks.append(joy)
+        _name2joystick[joy.index] = joy
+        _name2joystick[joy.name] = joy 
     joy._acquire()
     return joy
 
@@ -187,64 +195,64 @@ def button(nameOrIndexAndButton):
     return get(nameOrIndex).button(int(button))
     
 def sync():
-    if __sdl:
-        __sdl.SDL_JoystickUpdate()
-    for joy in __joysticks:
+    if _sdl:
+        _sdl.SDL_JoystickUpdate()
+    for joy in _joysticks:
         joy._sync()
     
 def init():    
-    global __sdl, __vjoy, __log, __joysticks, __name2joystick
+    global _sdl, _vjoy, _log, _joysticks, _name2joystick
     
-    __sdl = None
-    __vjoy = None
-    __log = logging.getLogger(__name__)
-    __joysticks = []
-    __name2joystick = dict()
+    _sdl = None
+    _vjoy = None
+    _log = logging.getLogger(__name__)
+    _joysticks = []
+    _name2joystick = dict()
 
     
     # preload all available joysticks for reporting
-    if not __sdl: 
+    if not _sdl: 
         try:
-            __sdl = CDLL(os.path.join("contrib","sdl","SDL.dll"))
-            __sdl.SDL_Init(0x200)
-            __sdl.SDL_JoystickName.restype = c_char_p
-            for index in range(0, __sdl.SDL_NumJoysticks()) :
+            _sdl = CDLL(os.path.join("contrib","sdl","SDL.dll"))
+            _sdl.SDL_Init(0x200)
+            _sdl.SDL_JoystickName.restype = c_char_p
+            for index in range(0, _sdl.SDL_NumJoysticks()) :
                 joy = Joystick(index)
-                __joysticks.append(joy)
+                _joysticks.append(joy)
         except Exception as e:
-            __log.warning("Cannot initialize support for physical Joysticks (%s)" % e)
-            __log.debug(traceback.format_exc())
+            _log.warning("Cannot initialize support for physical Joysticks (%s)" % e)
+            _log.debug(traceback.format_exc())
     
     # wrap virtual joysticks where applicable                
-    if not __vjoy: 
+    if not _vjoy: 
         try:
-            __vjoy = CDLL(os.path.join("contrib", "vjoy", "vJoyInterface.dll"))
+            _vjoy = CDLL(os.path.join("contrib", "vjoy", "vJoyInterface.dll"))
             
-            if not __vjoy.vJoyEnabled():
-                __log.info("No Virtual Joystick Driver active")
+            if not _vjoy.vJoyEnabled():
+                _log.info("No Virtual Joystick Driver active")
                 return
     
             numVirtuals = 0
                             
-            for i,joy in enumerate(__joysticks):
+            for i,joy in enumerate(_joysticks):
                 if joy.name == VirtualJoystick._DEVICE_NAME:
                     try:
                         virtual = VirtualJoystick(joy, numVirtuals)
-                        __joysticks[i] = virtual
+                        _joysticks[i] = virtual
                     except Exception as e:
-                        __log.warning("Cannot initialize support for virtual Joystick %s (%s)" % (joy.name, e))
-                        __log.debug(traceback.format_exc())
+                        _log.warning("Cannot initialize support for virtual Joystick %s (%s)" % (joy.name, e))
+                        _log.debug(traceback.format_exc())
                     numVirtuals += 1
                 
         except Exception as e:
-            __log.warning("Cannot initialize support for virtual Joysticks (%s)" % e)
-            __log.debug(traceback.format_exc())
+            _log.warning("Cannot initialize support for virtual Joysticks (%s)" % e)
+            _log.debug(traceback.format_exc())
     
     # build dictionary
-    for joy in __joysticks:
-        __name2joystick[joy.name] = joy 
-        __name2joystick._dict[joy.index] = joy 
-        __log.info(joy)
+    for joy in _joysticks:
+        _name2joystick[joy.name] = joy 
+        _name2joystick[joy.index] = joy 
+        _log.info(joy)
     
 
 init()

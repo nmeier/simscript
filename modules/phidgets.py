@@ -15,67 +15,67 @@ class __PhidgetWrapper:
             try:
                 return method(*args)
             except PhidgetException as pex:
-                __log.debug("PhidgetException in %s%s: %s" % (attr,args,pex.details) )
+                _log.debug("PhidgetException in %s%s: %s" % (attr,args,pex.details) )
                 return None
         return safe
 
 def init():
 
-    global __log, __serial2phidgets, __manager
+    global _log, _serial2phidgets, _manager
         
-    __log = logging.getLogger("phidgets")
-    __serial2phidgets = dict()
+    _log = logging.getLogger("phidgets")
+    _serial2phidgets = dict()
     
     PhidgetException.__str__ = lambda self: self.details
     
     try:
-        __manager = Manager()
-        __manager.openManager()
+        _manager = Manager()
+        _manager.openManager()
     except Exception as e:
-        __manager = None
-        __log.warning("Cannot initialize support for Phidgets (%s)", e)
-        __log.debug(traceback.format_exc())
+        _manager = None
+        _log.warning("Cannot initialize support for Phidgets (%s)", e)
+        _log.debug(traceback.format_exc())
         
     all()
 
 def num():
-    return len(__manager.getAttachedDevices()) if __manager else 0
+    return len(_manager.getAttachedDevices()) if _manager else 0
 
 def _phidget(serial):
 
     try:
-        return __serial2phidgets[serial]
+        return _serial2phidgets[serial]
     except KeyError:
         pass
 
-    if not __manager:   
+    if not _manager:   
         raise EnvironmentError("phidgets not initialized")
     
-    for device in __manager.getAttachedDevices():
+    for device in _manager.getAttachedDevices():
         if device.getSerialNum() == serial:
             try:
                 ptype = "Phidgets.Devices."+Devices.__all__[device.getDeviceClass()]+"."+Devices.__all__[device.getDeviceClass()]
-                __log.debug("Trying class %s for #%s" % (ptype, device.getSerialNum()))
+                _log.debug("Trying class %s for #%s" % (ptype, device.getSerialNum()))
                 phidget = simscript.classbyname(ptype)()
             except:
-                __log.debug(traceback.format_exc())
+                _log.debug(traceback.format_exc())
                 raise EnvironmentError("No specific wrapper for wrapper %s can be found" % phidget.getDeviceType)
             
-            __log.info("phidgets.get(%s) # returns %s" % (device.getSerialNum(), ptype) )
+            _log.info("phidgets.get(%s) # returns %s" % (device.getSerialNum(), ptype) )
 
             phidget = __PhidgetWrapper(phidget)
             phidget.openPhidget(serial)
-            __serial2phidgets[serial] = phidget
+            _serial2phidgets[serial] = phidget
             return phidget
         
     raise EnvironmentError("phidgets.get(%s) is not connected" % serial)
 
 def all():
             
-    if not __manager:   
+    if not _manager:   
         return []
    
-    return [ _phidget(p.getSerialNum()) for p in __manager.getAttachedDevices()]
+    return [ _phidget(p.getSerialNum()) for p in _manager.getAttachedDevices()]
 
 
 def get(serial):

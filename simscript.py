@@ -54,27 +54,6 @@ def main(argv):
     logging.basicConfig(level=level, stream=sys.stdout)
     log = logging.getLogger(os.path.split(argv[0])[1])
 
-    # scriptvariables
-    class State(dict):
-        def __missing__(self, key):
-            return None
-        def __getattribute__(self, attr):
-            try:
-                return super().__getattribute__(attr)
-            except:
-                return self[attr]
-        def __setattr__(self, attr, val):
-            self[attr] = val
-        def toggle(self,key,value):
-            last = self[key]
-            self[key] = value
-            if last:
-                return False
-            return value
-
-    scriptVars = dict();
-    scriptVars['state'] = State()
-    
     # ... load all modules
     modules = []
     sys.path.append("contrib")
@@ -100,7 +79,7 @@ def main(argv):
         modified = os.path.getmtime(os.path.join(scriptDir, scriptFile))
             
         try:
-            runpy.run_module(scriptName, scriptVars)
+            runpy.run_module(scriptName)
         except EnvironmentError as err:
             if lastError < modified:
                 log.warning("%s failed with %s" % (scriptFile,err))

@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-""" siminputs main script - automation of virtual inputs for simulators """
+""" simscript main - automation of virtual inputs for simulators """
 
-import runpy,sys,os,time,logging,traceback,getopt
+import sys,os,time,logging,traceback,getopt
 
 def classbyname(name):
     parts = name.split('.')
@@ -43,12 +43,12 @@ def main(argv):
     if len(args) != 1: 
         return usage()
     scriptName = args[0]
-    scriptFile = scriptName + '.py'   
-    scriptDir = os.path.abspath("scripts")
-    sys.path.append(scriptDir)
+    scriptFile = os.path.join(os.path.abspath("scripts"), scriptName + '.py')   
     
-    if not os.path.exists(os.path.join(scriptDir, scriptFile)):
-        return usage("%s not found in %s" % (scriptFile, scriptDir))
+    #sys.path.append(scriptDir)
+    
+    if not os.path.exists(scriptFile):
+        return usage("%s not found" % scriptFile)
 
     # logging 
     logging.basicConfig(level=level, stream=sys.stdout)
@@ -66,31 +66,44 @@ def main(argv):
         except Exception as e:
             log.warning("Couldn't initialize module %s: %s" % (mod, e) )
             log.debug(traceback.format_exc())
-    
+
     # loop
     lastError = 0
+    lastCompile = 0
     while True:
-  
+
+        # compile
+        lastModified = os.path.getmtime(scriptFile)
+        if lastModified>lastCompile:
+            lastCompile = lastModified
+            try:
+                with open(scriptFile, 'r') as file:
+                    code = compile(file.read(), scriptFile, 'exec', dont_inherit=True)
+            except:
+                log.warning("%s compilation failed with %s" % (scriptFile, traceback.format_exc()))
+                
+        # take time                
         sync = (time.clock()+(1/hertz))
         
+        # run modules
         for mod in modules: 
             mod.sync()
     
-        modified = os.path.getmtime(os.path.join(scriptDir, scriptFile))
-            
+        # run script
         try:
-            runpy.run_module(scriptName)
+            if code: exec(code)
         except EnvironmentError as err:
-            if lastError < modified:
+            if lastError < lastCompile:
                 log.warning("%s failed with %s" % (scriptFile,err))
-                lastError = modified
+                lastError = lastCompile
         except StopIteration:
             pass
-        except Exception as ex:
-            if lastError < modified:
-                log.warning("%s failed with %s %s" % (scriptFile, ex, traceback.format_exc()) )
-                lastError = modified
+        except Exception:
+            if lastError < lastCompile:
+                log.warning("%s failed with %s" % (scriptFile, traceback.format_exc()) )
+                lastError = lastCompile
             
+        # sync time
         wait = sync-time.clock()
         if wait>=0 : 
             time.sleep(wait)

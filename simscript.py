@@ -2,7 +2,7 @@
 
 """ simscript main - automation of virtual inputs for simulators """
 
-import sys,os,time,logging,traceback,getopt,windows
+import sys,os,time,logging,traceback,getopt
 
 def classbyname(name):
     parts = name.split('.')
@@ -20,8 +20,8 @@ def modulo(value,start,end):
 
 class Script():
     def __init__(self, name):
-        self.name = name if name.endswith('.py') else name+'.py'
-        self.file = os.path.join(os.path.abspath("scripts"), self.name)
+        self.name = name if not name.endswith('.py') else name[:-3]
+        self.file = os.path.join(os.path.abspath("scripts"), self.name+'.py')
         self.lastError = 0
         self.lastCompile = 0
         self.code = None
@@ -63,9 +63,7 @@ def usage(detail=None):
 
 def main(argv):
 
-    # another instance running?
-    if not windows.singleton():
-        return usage("already running")
+    global script, active
 
     # scan options
     level = logging.INFO
@@ -81,6 +79,23 @@ def main(argv):
     except Exception as e:
         return usage(str(e))
 
+    # logging 
+    logging.basicConfig(level=level, stream=sys.stdout)
+    log = logging.getLogger(os.path.splitext(os.path.basename(argv[0]))[0])
+    
+    # windows support?
+    try:
+        import windows
+    except:
+        log.info("Windows integration unavailable (e.g., System Tray Icon) - install http://www.lfd.uci.edu/~gohlke/pythonlibs/#pywin32")
+        windows = None
+
+    # another instance running?
+    if windows and not windows.singleton():
+        log.info("instance already running - exiting")
+        return usage("already running")
+    
+
     # script to run
     if len(args) > 1: 
         return usage()
@@ -90,10 +105,6 @@ def main(argv):
             return usage("%s not found" % script)
     else:
         script = None
-
-    # logging 
-    logging.basicConfig(level=level, stream=sys.stdout)
-    log = logging.getLogger(os.path.split(argv[0])[1])
 
     # ... load all modules
     modules = []
@@ -109,32 +120,36 @@ def main(argv):
             log.debug(traceback.format_exc())
             
     # prep ui
-    def actions():
-        actions = [("Quit", None, None, lambda: tray.close())]
-        for file in filter(lambda n: n.endswith('.py'), os.listdir("scripts")):
-            actions.append( (file, None, script.name==file, lambda f=file: switch(f)) )
-        return actions
-    
     def switch(name):
         log.info("Switching to script %s" % name)
-        nonlocal script
+        global script
         script = Script(name)
         
-    tray = windows.TrayIcon("SimScript", os.path.join(os.path.dirname(__file__), 'simscript.ico'), actions)
+    def quit():
+        log.info("Quitting")
+        global active
+        active = False
+        
+    def actions():
+        actions = [("Quit", None, None, quit)]
+        for file in filter(lambda n: n.endswith('.py'), os.listdir("scripts")):
+            actions.append( (file, None, os.path.basename(script.file)==file, lambda f=file: switch(f)) )
+        return actions
+    
+    tray = windows.TrayIcon("SimScript", os.path.join(os.path.dirname(__file__), 'simscript.ico'), actions) if windows else None
 
     # loop
-    active = [True]
-    while True in active:
+    active = True
+    while active:
 
         # take time                
         sync = (time.clock()+(1/hertz))
         
         # pump ui events
-        tray.pump(False)
+        if tray: tray.pump(False)
         
         # sync modules
-        for mod in modules: 
-            mod.sync()
+        for mod in modules: mod.sync()
     
         # run script 
         if script: script.run()
@@ -147,7 +162,7 @@ def main(argv):
             if not __debug__:
                 log.warning("%s executions took longer than sync frequency (%dms>%dms)" % ( script, (1/hertz-wait)*1000, 1/hertz*1000))
                 
-    # when we bail the loop
+    # done
     return 0    
 
 

@@ -66,8 +66,8 @@ class TrayIcon:
         self._hwnd = None
        
     def pump(self, block=True):
-        if not self._hwnd: raise
         if block:
+            if not self._hwnd: raise Exception("TrayIcon unavailable")
             win32gui.PumpMessages()
         else:
             win32gui.PumpWaitingMessages()    
@@ -80,12 +80,15 @@ if __name__ == "__main__":
     
     option = set([True])
     
+    def action():
+        print("action!")
+    
     def items():
         return [ 
-            ("Quit", None, None, lambda: tray.close()), 
-            ("Action 1", None, None, lambda: print("1")),
+            ("Quit", None, None, lambda: tray.close()),  
             ("Option 1", None, option, lambda: option.add(True)),
             ("Option 2", None, not option, lambda: option.discard(True))
+            ("Action", None, None, lambda: action),
             ]
         
     tray = TrayIcon("Test", os.path.join(os.path.dirname(__file__), 'simscript.ico'), items)

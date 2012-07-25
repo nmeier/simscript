@@ -20,41 +20,41 @@ def modulo(value,start,end):
 
 class Script():
     def __init__(self, name):
-        self.file = os.path.join(os.path.abspath("scripts"), name + '.py')
+        self.name = name if name.endswith('.py') else name+'.py'
+        self.file = os.path.join(os.path.abspath("scripts"), self.name)
         self.lastError = 0
         self.lastCompile = 0
         self.code = None
+        self.log = logging.getLogger(self.name)
     def __str__(self):
-        return self.file
-
-def run(script, log):
-    
-    if not script:
-        return
-    
-    lastModified = os.path.getmtime(script.file)
-    if lastModified>script.lastCompile:
-        script.lastCompile = lastModified
+        return self.name
+    def exists(self):
+        return os.path.exists(self.file)
+    def modified(self):
+        return os.path.getmtime(self.file)
+    def run(self):
+        if self.modified()>self.lastCompile:
+            self.lastCompile = self.modified()
+            try:
+                with open(self.file, 'r') as file:
+                    self.code = compile(file.read(), self.file, 'exec', dont_inherit=True)
+            except:
+                self.log.warning("compilation failed with %s" % traceback.format_exc())
+                self.code = None
+                
+        # run script
         try:
-            with open(script.file, 'r') as file:
-                script.code = compile(file.read(), script.file, 'exec', dont_inherit=True)
-        except:
-            log.warning("%s compilation failed with %s" % (script, traceback.format_exc()))
-            script.code = None
-            
-    # run script
-    try:
-        if script.code: exec(script.code)
-    except EnvironmentError as err:
-        if script.lastError < script.lastCompile:
-            log.warning("%s failed with %s" % (script, err))
-            script.lastError = script.lastCompile
-    except StopIteration:
-        pass
-    except Exception:
-        if script.lastError < script.lastCompile:
-            log.warning("%s failed with %s" % (script, traceback.format_exc()) )
-            script.lastError = script.lastCompile
+            if self.code: exec(self.code)
+        except EnvironmentError as err:
+            if self.lastError < self.lastCompile:
+                self.log.warning(err)
+                self.lastError = self.lastCompile
+        except StopIteration:
+            pass
+        except Exception:
+            if self.lastError < self.lastCompile:
+                self.log.warning(traceback.format_exc())
+                self.lastError = self.lastCompile
         
 def usage(detail=None):
     print("Usage: %s -d|--debug [scriptname]" % os.path.split(sys.argv[0])[1])
@@ -86,7 +86,7 @@ def main(argv):
         return usage()
     elif len(args) == 1:
         script = Script(args[0])
-        if not os.path.exists(script.file):
+        if not script.exists():
             return usage("%s not found" % script)
     else:
         script = None
@@ -109,8 +109,18 @@ def main(argv):
             log.debug(traceback.format_exc())
             
     # prep ui
-    tray = windows.TrayIcon("SimScript", os.path.join(os.path.dirname(__file__), 'simscript.ico'))
-    tray.add('Quit', None, None, lambda _: active.remove(True))
+    def actions():
+        actions = [("Quit", None, None, lambda: tray.close())]
+        for file in filter(lambda n: n.endswith('.py'), os.listdir("scripts")):
+            actions.append( (file, None, script.name==file, lambda f=file: switch(f)) )
+        return actions
+    
+    def switch(name):
+        log.info("Switching to script %s" % name)
+        nonlocal script
+        script = Script(name)
+        
+    tray = windows.TrayIcon("SimScript", os.path.join(os.path.dirname(__file__), 'simscript.ico'), actions)
 
     # loop
     active = [True]
@@ -127,7 +137,7 @@ def main(argv):
             mod.sync()
     
         # run script 
-        run(script, log)
+        if script: script.run()
         
         # sync time
         wait = sync-time.clock()

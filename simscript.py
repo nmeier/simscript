@@ -2,7 +2,7 @@
 
 """ simscript main - automation of virtual inputs for simulators """
 
-import sys,os,time,logging,traceback,getopt
+import sys,os,time,logging,traceback,getopt,windows
 
 def classbyname(name):
     parts = name.split('.')
@@ -18,12 +18,54 @@ def modulo(value,start,end):
     value = start+value if value>=0 else end+value
     return value
 
+class Script():
+    def __init__(self, name):
+        self.file = os.path.join(os.path.abspath("scripts"), name + '.py')
+        self.lastError = 0
+        self.lastCompile = 0
+        self.code = None
+    def __str__(self):
+        return self.file
+
+def run(script, log):
+    
+    if not script:
+        return
+    
+    lastModified = os.path.getmtime(script.file)
+    if lastModified>script.lastCompile:
+        script.lastCompile = lastModified
+        try:
+            with open(script.file, 'r') as file:
+                script.code = compile(file.read(), script.file, 'exec', dont_inherit=True)
+        except:
+            log.warning("%s compilation failed with %s" % (script, traceback.format_exc()))
+            script.code = None
+            
+    # run script
+    try:
+        if script.code: exec(script.code)
+    except EnvironmentError as err:
+        if script.lastError < script.lastCompile:
+            log.warning("%s failed with %s" % (script, err))
+            script.lastError = script.lastCompile
+    except StopIteration:
+        pass
+    except Exception:
+        if script.lastError < script.lastCompile:
+            log.warning("%s failed with %s" % (script, traceback.format_exc()) )
+            script.lastError = script.lastCompile
+        
+def usage(detail=None):
+    print("Usage: %s -d|--debug [scriptname]" % os.path.split(sys.argv[0])[1])
+    if detail: print("***",detail)
+    return 1
+
 def main(argv):
 
-    def usage(detail=None):
-        print("Usage: %s -d|--debug scriptname" % os.path.split(argv[0])[1])
-        if detail: print("***",detail)
-        return 1
+    # another instance running?
+    if not windows.singleton():
+        return usage("already running")
 
     # scan options
     level = logging.INFO
@@ -40,15 +82,14 @@ def main(argv):
         return usage(str(e))
 
     # script to run
-    if len(args) != 1: 
+    if len(args) > 1: 
         return usage()
-    scriptName = args[0]
-    scriptFile = os.path.join(os.path.abspath("scripts"), scriptName + '.py')   
-    
-    #sys.path.append(scriptDir)
-    
-    if not os.path.exists(scriptFile):
-        return usage("%s not found" % scriptFile)
+    elif len(args) == 1:
+        script = Script(args[0])
+        if not os.path.exists(script.file):
+            return usage("%s not found" % script)
+    else:
+        script = None
 
     # logging 
     logging.basicConfig(level=level, stream=sys.stdout)
@@ -66,50 +107,35 @@ def main(argv):
         except Exception as e:
             log.warning("Couldn't initialize module %s: %s" % (mod, e) )
             log.debug(traceback.format_exc())
+            
+    # prep ui
+    tray = windows.TrayIcon("SimScript", os.path.join(os.path.dirname(__file__), 'simscript.ico'))
+    tray.add('Quit', None, None, lambda _: active.remove(True))
 
     # loop
-    lastError = 0
-    lastCompile = 0
-    while True:
+    active = [True]
+    while True in active:
 
-        # compile
-        lastModified = os.path.getmtime(scriptFile)
-        if lastModified>lastCompile:
-            lastCompile = lastModified
-            try:
-                with open(scriptFile, 'r') as file:
-                    code = compile(file.read(), scriptFile, 'exec', dont_inherit=True)
-            except:
-                log.warning("%s compilation failed with %s" % (scriptFile, traceback.format_exc()))
-                
         # take time                
         sync = (time.clock()+(1/hertz))
         
-        # run modules
+        # pump ui events
+        tray.pump(False)
+        
+        # sync modules
         for mod in modules: 
             mod.sync()
     
-        # run script
-        try:
-            if code: exec(code)
-        except EnvironmentError as err:
-            if lastError < lastCompile:
-                log.warning("%s failed with %s" % (scriptFile,err))
-                lastError = lastCompile
-        except StopIteration:
-            pass
-        except Exception:
-            if lastError < lastCompile:
-                log.warning("%s failed with %s" % (scriptFile, traceback.format_exc()) )
-                lastError = lastCompile
-            
+        # run script 
+        run(script, log)
+        
         # sync time
         wait = sync-time.clock()
         if wait>=0 : 
             time.sleep(wait)
         else:  
             if not __debug__:
-                log.warning("%s executions took longer than sync frequency (%dms>%dms)" % ( scriptFile, (1/hertz-wait)*1000, 1/hertz*1000))
+                log.warning("%s executions took longer than sync frequency (%dms>%dms)" % ( script, (1/hertz-wait)*1000, 1/hertz*1000))
                 
     # when we bail the loop
     return 0    

@@ -2,7 +2,7 @@
 
 """ simscript main - automation of virtual inputs for simulators """
 
-import sys,os,time,logging,traceback,getopt
+import sys,os,time,logging,tempfile,traceback,getopt
 
 def classbyname(name):
     parts = name.split('.')
@@ -79,10 +79,14 @@ def main(argv):
     except Exception as e:
         return usage(str(e))
 
-    # logging 
+    # setup logging 
     logging.basicConfig(level=level, stream=sys.stdout)
-    log = logging.getLogger(os.path.splitext(os.path.basename(argv[0]))[0])
+    logfile = logging.FileHandler(tempfile.NamedTemporaryFile(mode='w+', suffix='.log', prefix='simscript_', delete=False).name)
+    logfile.setFormatter(logging.Formatter(logging.BASIC_FORMAT))
+    logging.getLogger().addHandler(logfile)
     
+    log = logging.getLogger(os.path.splitext(os.path.basename(argv[0]))[0])
+   
     # windows support?
     try:
         import windows
@@ -129,6 +133,9 @@ def main(argv):
         log.info("Quitting")
         global active
         active = False
+        
+    def log():
+        logfile.baseFilename
         
     def actions():
         actions = [("Quit", None, None, quit)]

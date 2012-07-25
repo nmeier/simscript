@@ -19,7 +19,7 @@ class __PhidgetWrapper:
                 return None
         return safe
 
-def init():
+def _init():
 
     global _log, _serial2phidgets, _manager, _encoderAxisLower
         
@@ -120,5 +120,5 @@ def encoder2axis(encoder, revolutions=1):
     return (pos-lower) / (upper-lower) * 2 - 1
 
 
-init()
+_init()
     

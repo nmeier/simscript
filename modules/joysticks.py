@@ -200,7 +200,7 @@ def sync():
     for joy in _joysticks:
         joy._sync()
     
-def init():    
+def _init():    
     global _sdl, _vjoy, _log, _joysticks, _name2joystick
     
     _sdl = None
@@ -255,4 +255,4 @@ def init():
         _log.info(joy)
     
 
-init()
+_init()

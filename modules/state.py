@@ -19,13 +19,13 @@ def inc(key):
     set(key,val)
     return val
 
-def init():
+def _init():
     global __dict
     __dict = dict()
 
 def sync():
     pass
 
-init()
+_init()
 
 

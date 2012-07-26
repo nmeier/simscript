@@ -2,7 +2,7 @@
 
 """ simscript main - automation of virtual inputs for simulators """
 
-import sys,os,time,logging,tempfile,traceback,getopt
+import sys,os,time,logging,tempfile,traceback,getopt,subprocess
 
 def classbyname(name):
     parts = name.split('.')
@@ -20,8 +20,10 @@ def modulo(value,start,end):
 
 class Script():
     def __init__(self, name):
+        if not name: raise Exception("no such script %s" % name)
         self.name = name if not name.endswith('.py') else name[:-3]
         self.file = os.path.join(os.path.abspath("scripts"), self.name+'.py')
+        if not self.exists(): raise Exception("script % doesn't exist" % name)
         self.lastError = 0
         self.lastCompile = 0
         self.code = None
@@ -61,6 +63,28 @@ def usage(detail=None):
     if detail: print("***",detail)
     return 1
 
+class LogFile(logging.FileHandler):
+    def __init__(self):
+        self.error = 0
+        self.warn = 0
+        self._temp = tempfile.NamedTemporaryFile(mode='w+', suffix='.log', prefix='simscript_', delete=False)
+        logging.FileHandler.__init__(self, self._temp.name, 'w+')
+        self.setFormatter(logging.Formatter(logging.BASIC_FORMAT))
+        
+    def __str__(self):
+        return "Log" if self.error==0 and self.warn == 0 else "Log (%d warnings, %d errors)" % (self.error, self.warn)
+        
+    def emit(self, record):
+        if record.levelno==logging.WARN: self.warn += 1
+        elif record.levelno==logging.ERROR: self.error += 1
+        logging.FileHandler.emit(self, record)
+        
+    def show(self):
+        subprocess.Popen("explorer %s" % self._temp.name)
+        
+    def reset(self):
+        self.warn = self.error = 0
+        
 def main(argv):
 
     global script, active
@@ -80,9 +104,9 @@ def main(argv):
         return usage(str(e))
 
     # setup logging 
+    logfile = LogFile()
+    
     logging.basicConfig(level=level, stream=sys.stdout)
-    logfile = logging.FileHandler(tempfile.NamedTemporaryFile(mode='w+', suffix='.log', prefix='simscript_', delete=False).name)
-    logfile.setFormatter(logging.Formatter(logging.BASIC_FORMAT))
     logging.getLogger().addHandler(logfile)
     
     log = logging.getLogger(os.path.splitext(os.path.basename(argv[0]))[0])
@@ -98,18 +122,22 @@ def main(argv):
     if windows and not windows.singleton():
         log.info("instance already running - exiting")
         return usage("already running")
-    
 
     # script to run
+    script = None
     if len(args) > 1: 
         return usage()
     elif len(args) == 1:
-        script = Script(args[0])
-        if not script.exists():
-            return usage("%s not found" % script)
+        try:
+            script = Script(args[0])
+        except:
+            return usage("%s not found" % args[0])
     else:
-        script = None
-
+        try:
+            script = Script(windows.recall("script"))
+        except Exception as e:
+            log.debug("restoring recalled script failed %s" % e)
+    
     # ... load all modules
     modules = []
     sys.path.append("contrib")
@@ -128,19 +156,17 @@ def main(argv):
         log.info("Switching to script %s" % name)
         global script
         script = Script(name)
+        windows.remember("script", script)
         
-    def quit():
+    def bbye():
         log.info("Quitting")
         global active
         active = False
         
-    def log():
-        logfile.baseFilename
-        
     def actions():
-        actions = [("Quit", None, None, quit)]
+        actions = [("Quit", None, None, bbye), (logfile, None, None, logfile.show)]
         for file in filter(lambda n: n.endswith('.py'), os.listdir("scripts")):
-            actions.append( (file, None, os.path.basename(script.file)==file, lambda f=file: switch(f)) )
+            actions.append( (file, None, script and os.path.basename(script.file)==file, lambda f=file: switch(f)) )
         return actions
     
     tray = windows.TrayIcon("SimScript", os.path.join(os.path.dirname(__file__), 'simscript.ico'), actions) if windows else None

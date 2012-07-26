@@ -1,4 +1,9 @@
-import win32gui, win32con, win32gui_struct, os.path, win32api, win32event, winerror
+import win32gui, win32con, win32gui_struct, os.path, win32api, win32event, winerror, logging
+
+try:
+    import _winreg as winreg
+except:
+    import winreg
  
 class TrayIcon:
   
@@ -21,9 +26,9 @@ class TrayIcon:
         wId = 1023
         for txt, bmp, checked, callback in items:
             if checked is None:
-                item, _ = win32gui_struct.PackMENUITEMINFO(text=txt,hbmpItem=bmp, wID=wId)
+                item, _ = win32gui_struct.PackMENUITEMINFO(text=str(txt),hbmpItem=bmp, wID=wId)
             else:
-                item, _ = win32gui_struct.PackMENUITEMINFO(text=txt,hbmpItem=bmp, wID=wId, fState = win32con.MFS_CHECKED if checked else win32con.MFS_UNCHECKED) 
+                item, _ = win32gui_struct.PackMENUITEMINFO(text=str(txt),hbmpItem=bmp, wID=wId, fState = win32con.MFS_CHECKED if checked else win32con.MFS_UNCHECKED) 
             win32gui.InsertMenuItem(hMenu, 0, 1, item)
             self._callbacks[wId] = callback
             wId += 1
@@ -76,6 +81,23 @@ def singleton():
     win32event.CreateMutex(None, False, "5ea86490-d4ec-11e1-9b23-0800200c9a66")
     return win32api.GetLastError() != winerror.ERROR_ALREADY_EXISTS
 
+def recall(key):
+    try:
+        reg = winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, "SOFTWARE\\simscript", 0, winreg.KEY_READ)
+        value, _ = winreg.QueryValueEx(reg, key)
+        return value
+    except:
+        logging.getLogger(__name__).warn("can't read %s from windows registry" % key)
+        return None
+
+def remember(key, value):
+    reg = winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, "SOFTWARE\\simscript", 0, winreg.KEY_SET_VALUE)
+    winreg.SetValueEx(reg, key, 0, winreg.REG_SZ, str(value))
+    winreg.CloseKey(reg)
+    
+    #QueryValue(reg, installkey) == installpath and
+    #CloseKey(reg)
+    
 if __name__ == "__main__":    
     
     option = set([True])

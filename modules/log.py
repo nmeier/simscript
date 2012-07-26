@@ -10,14 +10,13 @@ def debug(*args):
     log(logging.DEBUG, *args)
         
 def log(level, *args):        
-    try:
-        frm = inspect.currentframe().f_back
-        while True:
-            name = frm.f_globals['__name__']
-            if name != 'log': break
-            frm = frm.f_back
-    except:
-        name = None
+    frm = inspect.currentframe().f_back
+    name = None
+    while frm:
+        if 'script' in frm.f_globals:
+            name = frm.f_globals['script'].name
+            break
+        frm = frm.f_back
     logging.getLogger(name).log(level, *args)
 
 def sync():

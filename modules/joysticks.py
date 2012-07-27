@@ -110,6 +110,7 @@ class VirtualJoystick:
         self._position.index = virtualIndex+1
         
         self._acquired = False
+        self._dirty = False
 
         self._buttons = _vjoy.GetVJDButtonNumber(self._position.index)
         
@@ -146,6 +147,7 @@ class VirtualJoystick:
             raise EnvironmentError("joysticks.get('%s') value for axis %d not -1.0 < %d < 1.0" % (self.index, a, value))
         pkey, amin, amax = self._axis[a]
         self._position.__setattr__(pkey, int( (value+1)/2 * (amax-amin) + amin))
+        self._dirty = True
     
     def numButtons(self):
         return self._buttons
@@ -162,13 +164,18 @@ class VirtualJoystick:
             self._position.lButtons |= 1<<i
         else:
             self._position.lButtons &= ~(1<<i)
+        self._dirty = True
         
     def _sync(self):
+        if not self._dirty:
+            return
         if not self._acquired:
             return
         if not _vjoy.UpdateVJD(self._position.index, byref(self._position)):
             _log.warning("joysticks.get('%s') couldn't be set" % self.name)
-    
+            self._acquired = False
+        self._dirty = False
+        
     def __str__(self):
         return "joysticks.get('%s') # VirtualJoystick index %d" % (self.name, self.index)
      

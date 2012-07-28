@@ -162,6 +162,7 @@ def main(argv):
         
     def bbye():
         log.info("Quitting")
+        tray.close()
         global active
         active = False
         

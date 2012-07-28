@@ -133,6 +133,8 @@ def main(argv):
         except:
             return usage("%s not found" % args[0])
     else:
+        if not windows:
+            return usage()
         try:
             script = Script(windows.recall("script"))
         except Exception as e:

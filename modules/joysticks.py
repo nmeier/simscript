@@ -12,7 +12,7 @@ class Joystick:
                 index = nameOrIndex
         else: 
             for j in range(0, numJoysticks()) :
-                if nameOrIndex == str(_sdl.SDL_JoystickName(j), "utf-8"):
+                if nameOrIndex == _sdl.SDL_JoystickName(j).decode():
                     index = j
 
         try:    
@@ -21,7 +21,7 @@ class Joystick:
             raise EnvironmentError("joysticks.get('%s') is not available" % nameOrIndex)
 
         self._handle = c_void_p()
-        self.name = str(_sdl.SDL_JoystickName(self.index), "utf-8")
+        self.name = _sdl.SDL_JoystickName(self.index).decode()
         
     def _acquire(self):
         if self._handle:

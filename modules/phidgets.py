@@ -8,9 +8,9 @@ from Phidgets.PhidgetException import PhidgetException
 class __PhidgetWrapper:
     def __init__(self, phidget):
         self._phidget = phidget
-    def __getattribute__(self, attr):
-        phidget = super().__getattribute__("_phidget")
-        method = phidget.__getattribute__(attr)
+    def __getattr__(self, attr):
+        phidget = getattr(self, "_phidget")
+        method = getattr(phidget, attr)
         def safe(*args):
             try:
                 return method(*args)

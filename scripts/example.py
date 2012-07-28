@@ -10,7 +10,7 @@
 #   Map Push Button into Button (Missile Uncage)
 #   Map Rotation into Axis (Missile Acquisition Sound Level)
 #
-import joysticks, phidgets, state
+import joysticks, phidgets, state, keyboard, log
 
 vjoy = joysticks.get('vJoy Device')
 
@@ -35,3 +35,18 @@ if gearUp:
 gearDown = not gearUp and state.get("gear-seen-up")
 vjoy.setButton(2, gearUp)
 vjoy.setButton(3, gearDown)
+
+# saitex 1 button for gear toggle
+if state.toggle("gear", saitek.getButton(100)):
+    log.info("Toggling gear")
+    keyboard.click(keyboard.VK_CAPITAL)
+    
+# saitek 1 button for PTT while pressed
+ptt = state.toggle("PTT", saitek.getButton(101)) 
+if ptt == True:
+    log.info("PTT on")
+    keyboard.press(keyboard.VK_SHIFT)
+if ptt == False:
+    log.info("PTT off")
+    keyboard.release(keyboard.VK_SHIFT)
+    

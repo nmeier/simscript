@@ -1,10 +1,10 @@
 import win32gui, win32con, win32gui_struct, os.path, win32api, win32event, winerror, logging
 
 try:
-    import _winreg as winreg
+    import _winreg as winreg #@UnusedImport
 except:
-    import winreg
- 
+    import winreg #@Reimport
+
 class TrayIcon:
   
     def _commandCallback(self, hwnd, msg, wparam, lparam):
@@ -40,7 +40,9 @@ class TrayIcon:
             win32gui.PostMessage(hwnd, win32con.WM_NULL, 0, 0)
         except:
             pass
-    
+        
+
+        win32gui.DefWindowProc(hwnd, msg, wparam, lparam)
     
     def __init__(self, tip, ico, items):
         
@@ -65,6 +67,8 @@ class TrayIcon:
         win32gui.Shell_NotifyIcon(win32gui.NIM_ADD, (self._hwnd,0,win32gui.NIF_ICON | win32gui.NIF_MESSAGE | win32gui.NIF_TIP,win32con.WM_USER+20,win32gui.LoadImage(win32gui.GetModuleHandle(None), os.path.abspath(self._ico), win32con.IMAGE_ICON,0,0,win32con.LR_LOADFROMFILE | win32con.LR_DEFAULTSIZE), self._tip))
         
     def close(self):
+        if not self._hwnd:
+            return
         win32gui.Shell_NotifyIcon(win32gui.NIM_DELETE, (self._hwnd, 0))
         win32gui.DestroyWindow(self._hwnd)
         win32gui.PostQuitMessage(0) 

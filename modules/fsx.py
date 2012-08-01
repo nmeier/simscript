@@ -3,7 +3,7 @@ Created on 2011-02-26
 
 @author: Nils
 '''
-import logging,time,os.path,ctypes.wintypes,sys,traceback
+import logging,time,os.path,ctypes.wintypes,sys,traceback,decimal
 
 class _SimConnect:
     
@@ -174,45 +174,26 @@ def _init():
     except: 
         raise EnvironmentError("Cannot initialize DLL for FSX SimConnect")
     
-#def bcddecode(bcd):
-#    bcd = int(bcd)
-#    result = 0
-#    factor = 1
-#    while bcd!=0:
-#        result += (bcd % 0x10) * factor;
-#        factor *= 10
-#        bcd = bcd >> 4;
-#    return decimal.Decimal(result)
-#
-#def bcdencode(freq):
-#    freq = int(freq)
-#    result = 0
-#    shift = 0
-#    while freq!=0:
-#        result += (freq % 10) << shift
-#        shift += 4
-#        freq = int(freq/10)
-#    return result
-#    def bool(val):
-#        return True if int(val) else False
-#        def khzdecode(bcd):
-#            decoded = Decimal(bcddecode(bcd))
-#            # 1802 = 118.025, 1807 = 118.75
-#            if decoded %5 != 0: 
-#                decoded += Decimal('0.5')
-#            return decoded/100+100
-#        
-#        def khzencode(freq):
-#            return bcdencode( (freq-100)*100 )
-#        
-#        def mhzdecode(bcd):
-#            return Decimal(bcddecode(bcd))/10000
-#        
-#        def mhzencode(freq):
-#            return bcdencode( freq*10000)
-#        
-#        def decimal(integer):
-#            return Decimal(int(integer))
+def bcd2int(bcd):
+    bcd = int(bcd)
+    result = 0
+    factor = 1
+    while bcd!=0:
+        result += (bcd % 0x10) * factor;
+        factor *= 10
+        bcd = bcd >> 4;
+    return result
+
+def bcd2khz(bcd):
+    decoded = decimal.Decimal(bcd2int(bcd))
+    # 1802 = 118.025, 1807 = 118.75
+    if decoded %5 != 0: 
+        decoded += decimal.Decimal('0.5')
+    return decoded/100+100
+
+def bcd2mhz(bcd):
+    return decimal.Decimal(bcd2int(bcd))/10000
+        
         
 def _connect():
     

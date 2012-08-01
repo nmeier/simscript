@@ -20,7 +20,7 @@ if ptt == False:
     keyboard.release("shift t") # release keys (1. T, 2. Shift) 
 
 # report COM active frequency
-freq = fsx.get("COM ACTIVE FREQUENCY:1","Frequency BCD16", lambda x: x)
+freq = fsx.get("COM ACTIVE FREQUENCY:1","Frequency BCD16", fsx.bcd2khz)
 if state.set("freq", freq) != freq:
     log.info("Current frequency %s" % freq)
 

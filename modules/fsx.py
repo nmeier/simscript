@@ -5,83 +5,81 @@ Created on 2011-02-26
 '''
 import logging,time,os.path,ctypes.wintypes,sys,traceback,decimal
 
-class _SimConnect:
+(_SIMCONNECT_DATATYPE_INVALID,
+ _SIMCONNECT_DATATYPE_INT32,
+ _SIMCONNECT_DATATYPE_INT64,
+ _SIMCONNECT_DATATYPE_FLOAT32,
+ _SIMCONNECT_DATATYPE_FLOAT64,
+ _SIMCONNECT_DATATYPE_STRING8,
+ _SIMCONNECT_DATATYPE_STRING32,
+ _SIMCONNECT_DATATYPE_STRING64,
+ _SIMCONNECT_DATATYPE_STRING128,
+ _SIMCONNECT_DATATYPE_STRING256,
+ _SIMCONNECT_DATATYPE_STRING260,
+ _SIMCONNECT_DATATYPE_STRINGV,
+ _SIMCONNECT_DATATYPE_INITPOSITION,
+ _SIMCONNECT_DATATYPE_MARKERSTATE,
+ _SIMCONNECT_DATATYPE_WAYPOINT,
+ _SIMCONNECT_DATATYPE_LATLONALT,
+ _SIMCONNECT_DATATYPE_XYZ ) = range(17)
+
+(_SIMCONNECT_PERIOD_NEVER, 
+ _SIMCONNECT_PERIOD_ONCE, 
+ _SIMCONNECT_PERIOD_VISUAL_FRAME, 
+ _SIMCONNECT_PERIOD_SIM_FRAME, 
+ _SIMCONNECT_PERIOD_SECOND) = range(5)
+
+(_SIMCONNECT_RECV_ID_NULL,
+ _SIMCONNECT_RECV_ID_EXCEPTION,
+ _SIMCONNECT_RECV_ID_OPEN,
+ _SIMCONNECT_RECV_ID_QUIT,
+ _SIMCONNECT_RECV_ID_EVENT,
+ _SIMCONNECT_RECV_ID_EVENT_OBJECT_ADDREMOVE,
+ _SIMCONNECT_RECV_ID_EVENT_FILENAME,
+ _SIMCONNECT_RECV_ID_EVENT_FRAME,
+ _SIMCONNECT_RECV_ID_SIMOBJECT_DATA,
+ _SIMCONNECT_RECV_ID_SIMOBJECT_DATA_BYTYPE,
+ _SIMCONNECT_RECV_ID_CLOUD_STATE,
+ _SIMCONNECT_RECV_ID_WEATHER_OBSERVATION,
+ _SIMCONNECT_RECV_ID_ASSIGNED_OJBECT_ID,
+ _SIMCONNECT_RECV_ID_RESERVED_KEY,
+ _SIMCONNECT_RECV_ID_CUSTOM_ACTION,
+ _SIMCONNECT_RECV_ID_SYSTEM_STATE,
+ _SIMCONNECT_RECV_ID_CLIENT_DATA,
+ _SIMCONNECT_RECV_ID_EVENT_WEATHER_MODE,
+ _SIMCONNECT_RECV_ID_AIRPORT_LIST,
+ _SIMCONNECT_RECV_ID_VOR_LIST,
+ _SIMCONNECT_RECV_ID_NDB_LIST,
+ _SIMCONNECT_RECV_ID_WAYPOINT_LIST,
+ _SIMCONNECT_RECV_ID_EVENT_MULTIPLAYER_SERVER_STARTED,
+ _SIMCONNECT_RECV_ID_EVENT_MULTIPLAYER_CLIENT_STARTED,
+ _SIMCONNECT_RECV_ID_EVENT_MULTIPLAYER_SESSION_ENDED,
+ _SIMCONNECT_RECV_ID_EVENT_RACE_END,
+ _SIMCONNECT_RECV_ID_EVENT_RACE_LAP) = range(27)
     
-    (SIMCONNECT_DATATYPE_INVALID,
-     SIMCONNECT_DATATYPE_INT32,
-     SIMCONNECT_DATATYPE_INT64,
-     SIMCONNECT_DATATYPE_FLOAT32,
-     SIMCONNECT_DATATYPE_FLOAT64,
-     SIMCONNECT_DATATYPE_STRING8,
-     SIMCONNECT_DATATYPE_STRING32,
-     SIMCONNECT_DATATYPE_STRING64,
-     SIMCONNECT_DATATYPE_STRING128,
-     SIMCONNECT_DATATYPE_STRING256,
-     SIMCONNECT_DATATYPE_STRING260,
-     SIMCONNECT_DATATYPE_STRINGV,
-     SIMCONNECT_DATATYPE_INITPOSITION,
-     SIMCONNECT_DATATYPE_MARKERSTATE,
-     SIMCONNECT_DATATYPE_WAYPOINT,
-     SIMCONNECT_DATATYPE_LATLONALT,
-     SIMCONNECT_DATATYPE_XYZ ) = range(17)
-    
-    (SIMCONNECT_PERIOD_NEVER, 
-     SIMCONNECT_PERIOD_ONCE, 
-     SIMCONNECT_PERIOD_VISUAL_FRAME, 
-     SIMCONNECT_PERIOD_SIM_FRAME, 
-     SIMCONNECT_PERIOD_SECOND) = range(5)
-    
-    (SIMCONNECT_RECV_ID_NULL,
-     SIMCONNECT_RECV_ID_EXCEPTION,
-     SIMCONNECT_RECV_ID_OPEN,
-     SIMCONNECT_RECV_ID_QUIT,
-     SIMCONNECT_RECV_ID_EVENT,
-     SIMCONNECT_RECV_ID_EVENT_OBJECT_ADDREMOVE,
-     SIMCONNECT_RECV_ID_EVENT_FILENAME,
-     SIMCONNECT_RECV_ID_EVENT_FRAME,
-     SIMCONNECT_RECV_ID_SIMOBJECT_DATA,
-     SIMCONNECT_RECV_ID_SIMOBJECT_DATA_BYTYPE,
-     SIMCONNECT_RECV_ID_CLOUD_STATE,
-     SIMCONNECT_RECV_ID_WEATHER_OBSERVATION,
-     SIMCONNECT_RECV_ID_ASSIGNED_OJBECT_ID,
-     SIMCONNECT_RECV_ID_RESERVED_KEY,
-     SIMCONNECT_RECV_ID_CUSTOM_ACTION,
-     SIMCONNECT_RECV_ID_SYSTEM_STATE,
-     SIMCONNECT_RECV_ID_CLIENT_DATA,
-     SIMCONNECT_RECV_ID_EVENT_WEATHER_MODE,
-     SIMCONNECT_RECV_ID_AIRPORT_LIST,
-     SIMCONNECT_RECV_ID_VOR_LIST,
-     SIMCONNECT_RECV_ID_NDB_LIST,
-     SIMCONNECT_RECV_ID_WAYPOINT_LIST,
-     SIMCONNECT_RECV_ID_EVENT_MULTIPLAYER_SERVER_STARTED,
-     SIMCONNECT_RECV_ID_EVENT_MULTIPLAYER_CLIENT_STARTED,
-     SIMCONNECT_RECV_ID_EVENT_MULTIPLAYER_SESSION_ENDED,
-     SIMCONNECT_RECV_ID_EVENT_RACE_END,
-     SIMCONNECT_RECV_ID_EVENT_RACE_LAP) = range(27)
-    
-    class SIMCONNECT_RECV(ctypes.Structure):
-        """ SimConnect's base class of received events """
-        _fields_ = [
-            ("dwSize", ctypes.wintypes.DWORD ), 
-            ("dwVersion", ctypes.wintypes.DWORD ), 
-            ("dwId", ctypes.wintypes.DWORD )
-        ]
-    
-    class SIMCONNECT_RECV_SIMOBJECT_DATA(ctypes.Structure):
-        """ SimConnect's sim data received setevent """
-        _fields_ = [
-            ("dwSize", ctypes.wintypes.DWORD ), 
-            ("dwVersion", ctypes.wintypes.DWORD ), 
-            ("dwId", ctypes.wintypes.DWORD ),
-            ("dwRequestID", ctypes.wintypes.DWORD ), 
-            ("dwObjectID", ctypes.wintypes.DWORD ), 
-            ("dwDefineID", ctypes.wintypes.DWORD ), 
-            ("dwFlags", ctypes.wintypes.DWORD ), 
-            ("dwentrynumber", ctypes.wintypes.DWORD ), 
-            ("dwoutof", ctypes.wintypes.DWORD ), 
-            ("dwDefineCount", ctypes.wintypes.DWORD ), 
-            ("dwData", ctypes.wintypes.DOUBLE * 1 )
-        ]  
+class _SIMCONNECT_RECV(ctypes.Structure):
+    """ SimConnect's base class of received events """
+    _fields_ = [
+        ("dwSize", ctypes.wintypes.DWORD ), 
+        ("dwVersion", ctypes.wintypes.DWORD ), 
+        ("dwId", ctypes.wintypes.DWORD )
+    ]
+
+class _SIMCONNECT_RECV_SIMOBJECT_DATA(ctypes.Structure):
+    """ SimConnect's sim data received setevent """
+    _fields_ = [
+        ("dwSize", ctypes.wintypes.DWORD ), 
+        ("dwVersion", ctypes.wintypes.DWORD ), 
+        ("dwId", ctypes.wintypes.DWORD ),
+        ("dwRequestID", ctypes.wintypes.DWORD ), 
+        ("dwObjectID", ctypes.wintypes.DWORD ), 
+        ("dwDefineID", ctypes.wintypes.DWORD ), 
+        ("dwFlags", ctypes.wintypes.DWORD ), 
+        ("dwentrynumber", ctypes.wintypes.DWORD ), 
+        ("dwoutof", ctypes.wintypes.DWORD ), 
+        ("dwDefineCount", ctypes.wintypes.DWORD ), 
+        ("dwData", ctypes.wintypes.DOUBLE * 1 )
+    ]  
 
         
 class _ACTCTX(ctypes.Structure):
@@ -102,62 +100,29 @@ class _ACTCTX(ctypes.Structure):
         ("hModule", ctypes.wintypes.HMODULE )
     ]    
 
-class _SimVar:
-    
-    count = 0
-    
-    def __init__(self, datum, unit, decode):
-        self.id = _SimVar.count
-        _SimVar.count+=1
-        self.datum = datum
-        self.unit = unit
-        self.decode = decode
+class _State:
+    def __init__(self):
         self.value = None
-    def __str__(self):
-        return "%s: %s" % (self.datum, self.value)
-    def get(self):
-        return self.value
-    def set(self, value):
-        self.value = value
+        self.dataDefinitionIndex = None
+        self.simEventId = False
         
+_DISCONNECT_RESULTS = [ 0xC000013C, 0xC000014B, 0xC000020C, 0xC0000237, 0x80000025 ]    
+_IGNORED_RESULTS = [ 0x80004005 ]
+_RECONNECT_WAIT_SECONDS = 5
+_READ_DATA_DEFINITION_ID = 0
+_WRITE_DATA_DEFINITION_ID = 1
+
 _log = logging.getLogger(__name__)
-_disconnecthresults = [ 0xC000013C, 0xC000014B, 0xC000020C, 0xC0000237, 0x80000025 ]    
-_ignorehresults = [ 0x80004005 ]
-_readid = 0
-_writeid = 1
 _vars = dict()
 _writes = set()
-_simconnect = None
-_simhandle = ctypes.wintypes.HANDLE()
-_reconnectwait = 5
-_connectattempt = 0
+_dll = None
+_hsimconnect = ctypes.wintypes.HANDLE()
+_lastconnect = 0
+_nextDataDefinitionIndex = 0
         
-def _makeproperty(self, datum, unit, decode, simevent=None, encode=None):
-    instances = dict()
-    def var(simobj):
-        instance = 1 if not hasattr(simobj,"instance") else simobj.instance
-        try: 
-            return instances[instance]
-        except KeyError:
-            v = _SimVar(datum[instance-1] if type(datum)==tuple else datum.format(instance), unit, decode, simevent[instance-1] if type(simevent)==tuple else simevent.format(instance), encode)
-            instances[instance] = v
-            self._vars.append(v)
-            return v
-    def read(simobj):
-        return var(simobj).get()
-    def write(simobj,value):
-        v = var(simobj)
-        if v.get() == value:
-            return
-        _log.debug("Setting %s to %s" % (v.datum, value))
-        v.set(value)
-        self._writes.add(v)
-    return property(read,write if simevent and encode else None)
-
-
 def _init():
     
-    global _simconnect
+    global _dll
 
     # create and activate activation context
     actctx = _ACTCTX();
@@ -170,7 +135,7 @@ def _init():
 
     # now try to load SimConnect.dll        
     try:
-        _simconnect = ctypes.oledll.SimConnect
+        _dll = ctypes.oledll.SimConnect
     except: 
         raise EnvironmentError("Cannot initialize DLL for FSX SimConnect")
     
@@ -197,29 +162,31 @@ def bcd2mhz(bcd):
         
 def _connect():
     
-    if _simhandle : 
+    if _hsimconnect : 
         return True
     
     try:
-        _simconnect.SimConnect_Open(ctypes.byref(_simhandle), "FSScript", None, 0, 0, 0)
+        _dll.SimConnect_Open(ctypes.byref(_hsimconnect), "FSScript", None, 0, 0, 0)
     except WindowsError: 
         return False;
     
     for var in _vars:
-        var.reading = False
-        var.writing = False
+        var.dataDefinitionIndex = None
+        var.simEventId = None
+        
+    _nextDataDefinitionIndex = 0
 
     return True
     
 def _disconnect():
-    if not _simhandle:
+    if not _hsimconnect:
         return; 
     try: 
-        _simconnect.SimConnect_Close(ctypes.byref(_simhandle))
+        _dll.SimConnect_Close(ctypes.byref(_hsimconnect))
     except Exception: 
         pass
         
-def _write():
+def _syncWrites():
     
     if len(_writes)==0:
         return
@@ -227,15 +194,15 @@ def _write():
     #FSX._log.debug("Setting %s" % self._writes)
 
     for var in _writes:
-        if not var.writing:
+        if not var.simEventId:
             try:
-                _simconnect.SimConnect_MapClientEventToSimEvent(_simhandle, var.id, ctypes.wintypes.LPCSTR(var.simevent))
+                _dll.SimConnect_MapClientEventToSimEvent(_hsimconnect, var.id, ctypes.wintypes.LPCSTR(var.simevent))
                 _log.debug("Mapped %s to %s client event" % (var.datum, var.simevent))
-                var.writing = True
+                var.simEventId = True
             except WindowsError:
                 _log.warning("Failed to map %s to %s client event" % (var.datum, var.simevent))
         try:
-            _simconnect.SimConnect_TransmitClientEvent(_simhandle, 0, var.id, ctypes.wintypes.DWORD(var.encode(var.value)), 1, 0x00000010)
+            _dll.SimConnect_TransmitClientEvent(_hsimconnect, 0, var.id, ctypes.wintypes.DWORD(var.encode(var.value)), 1, 0x00000010)
         except:
             _log.warning("Failed to transmit client event %s" % var.simevent)
             _log.debug("Failed to transmit client event %s" % traceback.format_exc())
@@ -244,7 +211,7 @@ def _write():
 
 # the almost unsupported SetDataOnSimObject
 #        try:
-#            self._simconnect.SimConnect_ClearDataDefinition(self._simhandle, FSX._writeid)
+#            self._dll.SimConnect_ClearDataDefinition(self._hsimconnect, FSX._WRITE_DATA_DEFINITION_ID)
 #        except WindowsError:
 #            FSX._log.warning("Failed to clear data definition for write of %s (%s)" % (self._setvars, sys.exc_info()))
 #            return
@@ -254,84 +221,97 @@ def _write():
 #        i = 0
 #        for var in self._setvars:
 #            try:
-#                self._simconnect.SimConnect_AddToDataDefinition(self._simhandle, FSX._writeid, ctypes.wintypes.LPCSTR(var.datum), ctypes.wintypes.LPCSTR(var.unit), _SimConnect.SIMCONNECT_DATATYPE_FLOAT64, 0, -1)
+#                self._dll.SimConnect_AddToDataDefinition(self._hsimconnect, FSX._WRITE_DATA_DEFINITION_ID, ctypes.wintypes.LPCSTR(var.datum), ctypes.wintypes.LPCSTR(var.unit), _SimConnect.SIMCONNECT_DATATYPE_FLOAT64, 0, -1)
 #            except WindowsError:
 #                FSX._log.warning("Failed to add data definition for %s (%s)" % (var, sys.exc_info()))
 #                return
 #            data.values[i] = var.encode(var.value)
 #            i += 1
 #        try:
-#            self._simconnect.SimConnect_SetDataOnSimObject(self._simhandle, FSX._writeid, 0, 0, i, ctypes.sizeof(ctypes.wintypes.DOUBLE), ctypes.byref(data))
+#            self._dll.SimConnect_SetDataOnSimObject(self._hsimconnect, FSX._WRITE_DATA_DEFINITION_ID, 0, 0, i, ctypes.sizeof(ctypes.wintypes.DOUBLE), ctypes.byref(data))
 #        except WindowsError:
 #            FSX._log.warning("Failed to set data on sim object (%s)" % sys.exc_info())
         
-def _read(self):
+def _syncReads():
     
     # bail if there are no vars to read
-    if len(self._vars)==0:
+    if len(_vars)==0:
         return
 
-    # add simvar to data definition where still needed
-    for var in self._vars:
-        if not var.reading:
+    # add to data definition where still needed
+    for (datum, unit, _), state in _vars.items():
+        if state.dataDefinitionIndex == None:
             try:
-                self._simconnect.SimConnect_AddToDataDefinition(self._simhandle, _readid, ctypes.wintypes.LPCSTR(var.datum), ctypes.wintypes.LPCSTR(var.unit), _SimConnect.SIMCONNECT_DATATYPE_FLOAT64, 0, -1)
-                _log.debug("Added %s to SimConnect data definition" % var.datum)
-                var.reading = True
+                _dll.SimConnect_AddToDataDefinition(
+                    _hsimconnect, 
+                    _READ_DATA_DEFINITION_ID, 
+                    ctypes.wintypes.LPCSTR(datum), 
+                    ctypes.wintypes.LPCSTR(unit), 
+                    _SIMCONNECT_DATATYPE_FLOAT64, 
+                    0, 
+                    -1)
+                _log.debug("Added %s to SimConnect data definition" % datum)
+                state.dataDefinitionIndex = _nextDataDefinitionIndex
+                _nextDataDefinitionIndex += 1
             except WindowsError:
-                _log.warning("Failed to add %s to SimConnect data definition" % var.datum)
+                _log.warning("Failed to add %s to SimConnect data definition" % datum)
 
     # request data
     try:
-        self._simconnect.SimConnect_RequestDataOnSimObject(self._simhandle, _readid, _readid, 0, _SimConnect.SIMCONNECT_PERIOD_ONCE, 0, 0, 0, 0)
+        _dll.SimConnect_RequestDataOnSimObject(_hsimconnect, _READ_DATA_DEFINITION_ID, _READ_DATA_DEFINITION_ID, 0, _SIMCONNECT_PERIOD_ONCE, 0, 0, 0, 0)
     except WindowsError:
         _log.warning("Failed to request read on SimConnect user aircraft object")
-        self._disconnect()
+        _disconnect()
         return
 
     # wait for data 
-    precv = ctypes.POINTER(_SimConnect.SIMCONNECT_RECV)()
+    precv = ctypes.POINTER(_SIMCONNECT_RECV)()
     rlen = ctypes.wintypes.DWORD()
 
     while True:
         
         try:
-            self._simconnect.SimConnect_GetNextDispatch(self._simhandle, ctypes.byref(precv), ctypes.byref(rlen))
+            _dll.SimConnect_GetNextDispatch(_hsimconnect, ctypes.byref(precv), ctypes.byref(rlen))
             
-            if precv.contents.dwId==_SimConnect.SIMCONNECT_RECV_ID_QUIT:
+            if precv.contents.dwId==_SIMCONNECT_RECV_ID_QUIT:
                 _log.info("user quitting FSX")
-                self._disconnect()
+                _disconnect()
                 return
     
-            if precv.contents.dwId==_SimConnect.SIMCONNECT_RECV_ID_SIMOBJECT_DATA:
-                precv = ctypes.cast(precv, ctypes.POINTER(_SimConnect.SIMCONNECT_RECV_SIMOBJECT_DATA))
-                if precv.contents.dwDefineID == _readid:
+            if precv.contents.dwId==_SIMCONNECT_RECV_ID_SIMOBJECT_DATA:
+                precv = ctypes.cast(precv, ctypes.POINTER(_SIMCONNECT_RECV_SIMOBJECT_DATA))
+                if precv.contents.dwDefineID == _READ_DATA_DEFINITION_ID:
                     break
                 
         except WindowsError:
             rc = 0x100000000 + sys.exc_info()[1].winerror
-            if rc in _disconnecthresults:
+            if rc in _DISCONNECT_RESULTS:
                 _log.warning("disconnected from SimConnect")
-                self._disconnect()
+                _disconnect()
                 return
-            if not rc in _ignorehresults:
+            if not rc in _IGNORED_RESULTS:
                 _log.debug("failed to read next dispatch from SimConnect 0x%X" % rc)
 
     # read data
     pdata = ctypes.cast(precv.contents.dwData, ctypes.POINTER(ctypes.wintypes.DOUBLE))
-    for i,var in enumerate(self._vars):
-        if i==precv.contents.dwDefineCount: break
-        var.set(var.decode(pdata[i]))
+    for (datum, _, decode), state in _vars.items():
+        if state.dataDefinitionIndex>=precv.contents.dwDefineCount:
+            _log.debug("no data received for %s, %d>=%d" % (datum,state.dataDefinitionIndex,precv.contents.dwDefineCount) )
+            continue
+        state.value = decode(pdata[state.dataDefinitionIndex])
 
-def get(datum, unit, decode):
+'''
+ see http://msdn.microsoft.com/en-us/library/cc526981.aspx
+'''
+def get(datum, unit, decode=lambda x: x):
     key = (datum,unit,decode)
     try:
-        var = _vars[key]
+        state = _vars[key]
+        result = state.get()
+        return decode(result) if result!=None else None 
     except KeyError:
-        var = _SimVar(datum,unit,decode)
-        _vars[key] = var
-    result = var.get()
-    return decode(result) if result!=None else None 
+        _vars[key] = _State()
+        return None
 
 def sync(): 
     
@@ -339,21 +319,21 @@ def sync():
     if len(_writes)==0 and len(_vars)==0:
         return
     
-    global _connectattempt
-    if not _simhandle :
-        if _connectattempt > time.time() - _reconnectwait:
+    global _lastconnect
+    if not _hsimconnect :
+        if _lastconnect > time.time() - _RECONNECT_WAIT_SECONDS:
             return
-        _connectattempt = time.time()
+        _lastconnect = time.time()
         if not _connect() : 
             _log.info("SimConnect not established")
             return
         _log.info("SimConnect established")
         
     # do pending sets
-    _write()
+    _syncWrites()
     
     # do reads
-    _read()
+    _syncReads()
 
 _init()        
         

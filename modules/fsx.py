@@ -106,18 +106,14 @@ class _SimVar:
     
     count = 0
     
-    def __init__(self, datum, unit, decode, simevent, encode):
+    def __init__(self, datum, unit, decode):
         self.id = _SimVar.count
         _SimVar.count+=1
         self.datum = datum
         self.unit = unit
         self.decode = decode
-        self.simevent = simevent
-        self.encode = encode
         self.value = None
-        self.reading = False
-        self.writing = False
-    def __repr__(self):
+    def __str__(self):
         return "%s: %s" % (self.datum, self.value)
     def get(self):
         return self.value
@@ -129,7 +125,7 @@ _disconnecthresults = [ 0xC000013C, 0xC000014B, 0xC000020C, 0xC0000237, 0x800000
 _ignorehresults = [ 0x80004005 ]
 _readid = 0
 _writeid = 1
-_vars = []
+_vars = dict()
 _writes = set()
 _simconnect = None
 _simhandle = ctypes.wintypes.HANDLE()
@@ -159,12 +155,14 @@ def _makeproperty(self, datum, unit, decode, simevent=None, encode=None):
     return property(read,write if simevent and encode else None)
 
 
-def init():
+def _init():
+    
+    global _simconnect
 
     # create and activate activation context
     actctx = _ACTCTX();
     actctx.size = ctypes.sizeof(actctx)
-    actctx.lpSource = ctypes.wintypes.LPSTR(os.path.abspath("simconnect.manifest").encode())
+    actctx.lpSource = ctypes.wintypes.LPSTR(os.path.join(os.path.dirname(__file__), 'simconnect.manifest').encode())
     if not ctypes.windll.Kernel32.ActivateActCtx(
         ctypes.wintypes.HANDLE(ctypes.windll.Kernel32.CreateActCtxA(ctypes.byref(actctx))), 
         ctypes.byref(ctypes.wintypes.ULONG())):
@@ -344,17 +342,31 @@ def _read(self):
         if i==precv.contents.dwDefineCount: break
         var.set(var.decode(pdata[i]))
 
-    
+def get(datum, unit, decode):
+    key = (datum,unit,decode)
+    try:
+        var = _vars[key]
+    except KeyError:
+        var = _SimVar(datum,unit,decode)
+        _vars[key] = var
+    result = var.get()
+    return decode(result) if result!=None else None 
+
 def sync(): 
+    
+    # active?
+    if len(_writes)==0 and len(_vars)==0:
+        return
+    
     global _connectattempt
     if not _simhandle :
         if _connectattempt > time.time() - _reconnectwait:
             return
         _connectattempt = time.time()
         if not _connect() : 
-            _log.debug("SimConnect not established")
+            _log.info("SimConnect not established")
             return
-        _log.debug("SimConnect established")
+        _log.info("SimConnect established")
         
     # do pending sets
     _write()
@@ -362,12 +374,5 @@ def sync():
     # do reads
     _read()
 
-init()        
-        
-if __name__ == '__main__':
-    while (True):
-        time.sleep(1/50)
-        sync()
-        
-            
+_init()        
         

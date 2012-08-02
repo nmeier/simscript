@@ -5,6 +5,8 @@ Created on 2011-02-26
 '''
 import logging,time,ctypes.wintypes,sys,traceback,decimal,tempfile
 
+_SIMCONNECT_OBJECT_ID_USER = 0
+
 (_SIMCONNECT_DATATYPE_INVALID,
  _SIMCONNECT_DATATYPE_INT32,
  _SIMCONNECT_DATATYPE_INT64,
@@ -179,7 +181,7 @@ def _connect():
     except WindowsError: 
         return False;
     
-    for var in _vars:
+    for var in _vars.values():
         var.dataDefinitionIndex = None
         var.simEventId = None
         
@@ -243,6 +245,8 @@ def _syncWrites():
         
 def _syncReads():
     
+    global _nextDataDefinitionIndex
+    
     # bail if there are no vars to read
     if len(_vars)==0:
         return
@@ -267,7 +271,7 @@ def _syncReads():
 
     # request data
     try:
-        _dll.SimConnect_RequestDataOnSimObject(_hsimconnect, _READ_DATA_DEFINITION_ID, _READ_DATA_DEFINITION_ID, 0, _SIMCONNECT_PERIOD_ONCE, 0, 0, 0, 0)
+        _dll.SimConnect_RequestDataOnSimObject(_hsimconnect, _READ_DATA_DEFINITION_ID, _READ_DATA_DEFINITION_ID, _SIMCONNECT_OBJECT_ID_USER, _SIMCONNECT_PERIOD_ONCE, 0, 0, 0, 0)
     except WindowsError:
         _log.warning("Failed to request read on SimConnect user aircraft object")
         _disconnect()
@@ -317,7 +321,7 @@ def get(datum, unit, decode=lambda x: x):
     try:
         state = _vars[key]
         result = state.value
-        return decode(result) if result!=None else None 
+        return result if result!=None else None 
     except KeyError:
         _vars[key] = _State()
         return None

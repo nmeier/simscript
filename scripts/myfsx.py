@@ -21,8 +21,14 @@ if ptt == False:
 
 # saitek 3&4 buttons for increasing COM active frequency 
 # see http://msdn.microsoft.com/en-us/library/cc526981.aspx#Frequency
+
 # | COM | ACTIVE FREQUENCY:index | Com frequency. Index is 1 or 2 | Frequency | BCD16 | N | All aircraft |
 freq = fsx.get("COM ACTIVE FREQUENCY:1","Frequency BCD16", fsx.bcd2khz)
 if state.set("freq", freq) != freq:
     log.info("Current frequency %s" % freq)
+
+# GEAR HANDLE POSITION | True if gear handle is applied | Bool | Y | All aircraft
+handle = fsx.get("GEAR HANDLE POSITION", "Bool", bool)
+if state.set("handle", handle) != handle:
+    log.info("Current gear handle position down=%s" % handle)
 

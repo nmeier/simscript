@@ -5,6 +5,8 @@ from Phidgets.Manager import Manager
 from Phidgets import Devices
 from Phidgets.PhidgetException import PhidgetException
 
+_ENCODER_TICKS_PER_REVOLUTION = 80
+
 class __PhidgetWrapper:
     def __init__(self, phidget):
         self._phidget = phidget
@@ -21,11 +23,11 @@ class __PhidgetWrapper:
 
 def _init():
 
-    global _log, _serial2phidgets, _manager, _encoderAxisLower
+    global _log, _serial2phidgets, _manager, _encoderHistory
         
     _log = logging.getLogger("phidgets")
     _serial2phidgets = dict()
-    _encoderAxisLower = dict()
+    _encoderHistory = dict()
 
     PhidgetException.__str__ = lambda self: self.details
     
@@ -108,17 +110,35 @@ def _rerange(lower, value, upper):
         return value, value, value+(upper-lower)
     return lower, value, upper
 
+''' translates a boundless encoder position to an axis for given number of revolutions '''
 def encoder2axis(encoder, revolutions=1):
     pos = encoder.getPosition(0)
-    lower = _encoderAxisLower.get(encoder, pos)
-    upper = lower + int(revolutions*80)
+    lower = _encoderHistory.get( (encoder,"axis_start") , pos)
+    upper = lower + int(revolutions*_ENCODER_TICKS_PER_REVOLUTION)
 
     lower, pos, upper = _rerange(lower, pos, upper)
     
-    _encoderAxisLower[encoder] = lower
+    _encoderHistory[ (encoder,"axis_start") ] = lower
     
     return (pos-lower) / (upper-lower) * 2 - 1
 
+''' translates a boundless encoder positions to increments per revolution '''
+def encoder2delta(encoder, ticks=8):
+    
+    key = (encoder,"current_tick")
+    
+    # pos has to move to one of the 'click' areas
+    pos = int(encoder.getPosition(0) / (_ENCODER_TICKS_PER_REVOLUTION/ticks/2))
+    if pos&1:
+        delta = 0
+    else:
+        pos >>= 1
+        # calculate delta to current position
+        delta = _encoderHistory.get(key, pos) - pos
+        
+    _encoderHistory[key] = pos
+    
+    return delta
 
 _init()
     

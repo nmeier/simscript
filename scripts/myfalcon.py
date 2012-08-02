@@ -10,7 +10,7 @@
 #   Map Push Button into Button (Missile Uncage)
 #   Map Rotation into Axis (Missile Acquisition Sound Level)
 #
-import joysticks, phidgets, state, keyboard, log
+import joysticks, phidgets, state
 
 vjoy = joysticks.get('vJoy Device')
 

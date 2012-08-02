@@ -19,10 +19,11 @@ def modulo(value,start,end):
     return value
 
 class Script():
+    dir = os.path.abspath("scripts")
     def __init__(self, name):
         if not name: raise Exception("no such script %s" % name)
         self.name = name if not name.endswith('.py') else name[:-3]
-        self.file = os.path.join(os.path.abspath("scripts"), self.name+'.py')
+        self.file = os.path.join(dir, self.name+'.py')
         if not self.exists(): raise Exception("script % doesn't exist" % name)
         self.lastError = 0
         self.lastCompile = 0
@@ -166,8 +167,12 @@ def main(argv):
         global active
         active = False
         
+    def edit():
+        log.info("Edit")
+        subprocess.Popen("explorer %s" % Script.dir)
+        
     def actions():
-        actions = [("Quit", None, None, bbye), (logfile, None, None, logfile.show)]
+        actions = [("Quit", None, None, bbye), (logfile, None, None, logfile.show), ("Edit", None, None, edit)]
         for file in filter(lambda n: n.endswith('.py'), os.listdir("scripts")):
             actions.append( (file, None, script and os.path.basename(script.file)==file, lambda f=file: switch(f)) )
         return actions

@@ -3,7 +3,7 @@ Created on 2011-02-26
 
 @author: Nils
 '''
-import logging,time,os.path,ctypes.wintypes,sys,traceback,decimal
+import logging,time,ctypes.wintypes,sys,traceback,decimal,tempfile
 
 (_SIMCONNECT_DATATYPE_INVALID,
  _SIMCONNECT_DATATYPE_INT32,
@@ -125,9 +125,18 @@ def _init():
     global _dll
 
     # create and activate activation context
+    assembly = tempfile.NamedTemporaryFile(mode='w+', delete=False)
+    assembly.write("""<?xml version='1.0' encoding='UTF-8' standalone='yes'?>
+        <assembly xmlns='urn:schemas-microsoft-com:asm.v1' manifestVersion='1.0'>
+          <dependency><dependentAssembly>
+              <assemblyIdentity type='win32' name='Microsoft.FlightSimulator.SimConnect ' version='10.0.61242.0' processorArchitecture='x86' publicKeyToken='67c7c14424d61b5b' />
+          </dependentAssembly></dependency>
+        </assembly>""")
+    assembly.close()
+            
     actctx = _ACTCTX();
     actctx.size = ctypes.sizeof(actctx)
-    actctx.lpSource = ctypes.wintypes.LPSTR(os.path.join(os.path.dirname(__file__), 'simconnect.manifest').encode())
+    actctx.lpSource = ctypes.wintypes.LPSTR(assembly.name.encode())
     if not ctypes.windll.Kernel32.ActivateActCtx(
         ctypes.wintypes.HANDLE(ctypes.windll.Kernel32.CreateActCtxA(ctypes.byref(actctx))), 
         ctypes.byref(ctypes.wintypes.ULONG())):
@@ -307,7 +316,7 @@ def get(datum, unit, decode=lambda x: x):
     key = (datum,unit,decode)
     try:
         state = _vars[key]
-        result = state.get()
+        result = state.value
         return decode(result) if result!=None else None 
     except KeyError:
         _vars[key] = _State()

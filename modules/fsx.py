@@ -208,6 +208,8 @@ def _disconnect():
         
 def _syncWrites():
     
+    global _nextSimEventId
+    
     if not _datumvalueWrites:
         return
     
@@ -230,44 +232,23 @@ def _syncWrites():
                 
         # transmit
         try:
-            _dll.SimConnect_TransmitClientEvent(_hsimconnect, 0, simEvent, ctypes.wintypes.DWORD(value), 1, _SIMCONNECT_EVENT_FLAG_GROUPID_IS_PRIORITY)
+            #SimConnect_TransmitClientEvent(self._simhandle, 0, var.id, ctypes.wintypes.DWORD(var.encode(var.value)), 1, 0x00000010)
+            #_dll.SimConnect_TransmitClientEvent(_hsimconnect, 0, simEvent, ctypes.wintypes.DWORD(value), 1, _SIMCONNECT_EVENT_FLAG_GROUPID_IS_PRIORITY)
+            _dll.SimConnect_TransmitClientEvent(_hsimconnect, 0, simEvent, ctypes.wintypes.DWORD(value), 1, 0x00000010)
         except:
             _log.warning("Failed to transmit client event %s for %s" % (simEvent, datum))
             _log.debug(traceback.format_exc())
 
-    _datumvalueWrites.clear()
-
-# the almost unsupported SetDataOnSimObject
-#        try:
-#            self._dll.SimConnect_ClearDataDefinition(self._hsimconnect, FSX._WRITE_DATA_DEFINITION_ID)
-#        except WindowsError:
-#            FSX._log.warning("Failed to clear data definition for write of %s (%s)" % (self._setvars, sys.exc_info()))
-#            return
-#        class Data(ctypes.Structure):
-#            _fields_ = [ ("values", ctypes.wintypes.DOUBLE * len(self._setvars)) ] 
-#        data = Data()
-#        i = 0
-#        for value in self._setvars:
-#            try:
-#                self._dll.SimConnect_AddToDataDefinition(self._hsimconnect, FSX._WRITE_DATA_DEFINITION_ID, ctypes.wintypes.LPCSTR(value.datum), ctypes.wintypes.LPCSTR(value.unit), _SimConnect.SIMCONNECT_DATATYPE_FLOAT64, 0, -1)
-#            except WindowsError:
-#                FSX._log.warning("Failed to add data definition for %s (%s)" % (value, sys.exc_info()))
-#                return
-#            data.values[i] = value.encode(value.value)
-#            i += 1
-#        try:
-#            self._dll.SimConnect_SetDataOnSimObject(self._hsimconnect, FSX._WRITE_DATA_DEFINITION_ID, 0, 0, i, ctypes.sizeof(ctypes.wintypes.DOUBLE), ctypes.byref(data))
-#        except WindowsError:
-#            FSX._log.warning("Failed to set data on sim object (%s)" % sys.exc_info())
-        
+    del _datumvalueWrites[:]
+       
 def _syncReads():
     
     global _nextDataDefinitionIndex
     
     # bail if there are no vars in data definition
-    if len(_datumunit2datadefinitionindex)==0:
+    if len(_datumunit2value)==0:
         return
-
+    
     # add to data definition where still needed
     for datumunit in _datumunit2value:
         
@@ -342,7 +323,7 @@ def get(datum, unit, decode=lambda x: x):
         _datumunit2value[(datum,unit)] = None
         return None
 
-def set(datum, value=None, encode=lambda x: x):
+def set(datum, value=0, encode=lambda x: x): #@ReservedAssignment
 
     _datumvalueWrites.append( (datum,encode(value)) )    
 

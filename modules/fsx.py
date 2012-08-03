@@ -288,6 +288,10 @@ def _syncReads():
         try:
             _dll.SimConnect_GetNextDispatch(_hsimconnect, ctypes.byref(precv), ctypes.byref(rlen))
             
+            if precv.contents.dwId==_SIMCONNECT_RECV_ID_NULL:
+                # no messages in the queue - yield
+                return
+            
             if precv.contents.dwId==_SIMCONNECT_RECV_ID_QUIT:
                 _log.info("user quitting FSX")
                 _disconnect()
@@ -303,11 +307,12 @@ def _syncReads():
             if rc in _DISCONNECT_RESULTS:
                 _log.warning("disconnected from SimConnect")
                 _disconnect()
-                return
             if not rc in _IGNORED_RESULTS:
                 _log.debug("failed to read next dispatch from SimConnect 0x%X" % rc)
+            # yield
+            return
 
-    # read data and keep 
+    # _READ_DATA_DEFINITION_ID - keep values
     pdata = ctypes.cast(precv.contents.dwData, ctypes.POINTER(ctypes.wintypes.DOUBLE))
     for datumunit, index in _datumunit2datadefinitionindex.items():
         if index>=precv.contents.dwDefineCount:

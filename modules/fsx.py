@@ -221,7 +221,7 @@ def _syncWrites():
         except KeyError:
             try:
                 simEvent = _nextSimEventId
-                _dll.SimConnect_MapClientEventToSimEvent(_hsimconnect, simEvent, ctypes.wintypes.LPCSTR(datum))
+                _dll.SimConnect_MapClientEventToSimEvent(_hsimconnect, simEvent, ctypes.wintypes.LPCSTR(datum.encode()))
                 _datum2simevent[datum] = simEvent;
                 _nextSimEventId += 1
                 _log.debug("Mapped %s to %s client event" % (datum, simEvent))
@@ -260,8 +260,8 @@ def _syncReads():
                 _dll.SimConnect_AddToDataDefinition(
                     _hsimconnect, 
                     _READ_DATA_DEFINITION_ID, 
-                    ctypes.wintypes.LPCSTR(datum), 
-                    ctypes.wintypes.LPCSTR(unit), 
+                    ctypes.wintypes.LPCSTR(datum.encode()), 
+                    ctypes.wintypes.LPCSTR(unit.encode()), 
                     _SIMCONNECT_DATATYPE_FLOAT64, 
                     0, 
                     -1)

@@ -184,7 +184,7 @@ def main(argv):
     while active:
 
         # take time                
-        sync = (time.clock()+(1/hertz))
+        sync = (time.clock()+(1.0/hertz))
         
         # pump ui events
         if tray: tray.pump(False)
@@ -200,8 +200,7 @@ def main(argv):
         if wait>=0 : 
             time.sleep(wait)
         else:  
-            if not __debug__:
-                log.warning("%s executions took longer than sync frequency (%dms>%dms)" % ( script, (1/hertz-wait)*1000, 1/hertz*1000))
+            log.warn("%s executions took longer than sync frequency (%dms>%dms)" % ( script, (1.0/hertz-wait)*1000, 1.0/hertz*1000))
                 
     # done
     return 0    

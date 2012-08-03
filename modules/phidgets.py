@@ -73,7 +73,7 @@ def _phidget(serial):
         
     raise EnvironmentError("phidgets.get(%s) is not connected" % serial)
 
-def all():
+def all(): #@ReservedAssignment
             
     if not _manager:   
         return []
@@ -128,16 +128,14 @@ def encoder2delta(encoder, ticks=8):
     key = (encoder,"current_tick")
     
     # pos has to move to one of the 'click' areas
-    pos = int(encoder.getPosition(0) / (_ENCODER_TICKS_PER_REVOLUTION/ticks/2))
-    if pos&1:
-        delta = 0
-    else:
-        pos >>= 1
-        # calculate delta to current position
-        delta = _encoderHistory.get(key, pos) - pos
-        
-    _encoderHistory[key] = pos
+    pos = int(encoder.getPosition(0) / (_ENCODER_TICKS_PER_REVOLUTION/ticks/2) )
     
+    if pos&1:
+        return 0
+    pos >>= 1
+    # calculate delta to current position
+    delta = _encoderHistory.get(key, pos) - pos
+    _encoderHistory[key] = pos
     return delta
 
 _init()

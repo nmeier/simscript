@@ -23,7 +23,7 @@ class Script():
     def __init__(self, name):
         if not name: raise Exception("no such script %s" % name)
         self.name = name if not name.endswith('.py') else name[:-3]
-        self.file = os.path.join(dir, self.name+'.py')
+        self.file = os.path.join(Script.dir, self.name+'.py')
         if not self.exists(): raise Exception("script % doesn't exist" % name)
         self.lastError = 0
         self.lastCompile = 0

@@ -73,7 +73,7 @@ class LogFile(logging.FileHandler):
         self.setFormatter(logging.Formatter(logging.BASIC_FORMAT))
         
     def __str__(self):
-        return "Log" if self.error==0 and self.warn == 0 else "Log (%d warnings, %d errors)" % (self.error, self.warn)
+        return "Log" if self.error==0 and self.warn == 0 else "Log (%d warnings, %d errors)" % (self.warn, self.error)
         
     def emit(self, record):
         if record.levelno==logging.WARN: self.warn += 1
@@ -82,6 +82,7 @@ class LogFile(logging.FileHandler):
         
     def show(self):
         subprocess.Popen("explorer %s" % self._temp.name)
+        self.reset()
         
     def reset(self):
         self.warn = self.error = 0

@@ -121,10 +121,11 @@ _READ_DATA_DEFINITION_ID = 0
 _WRITE_DATA_DEFINITION_ID = 1
 
 _log = logging.getLogger(__name__)
-_datumunit2datadefinitionindex = dict()
-_datumunit2value = dict()
-_datumvalueWrites = []
-_datum2simevent = dict()
+_var2index = dict()
+_var2value = dict()
+_clientEvents = []
+_simEvents = dict()
+_sets = []
 _dll = None
 _hsimconnect = ctypes.wintypes.HANDLE()
 _lastconnect = 0
@@ -190,8 +191,8 @@ def _connect():
     except WindowsError: 
         return False;
     
-    _datumunit2datadefinitionindex.clear()
-    _datum2simevent.clear()
+    _var2index.clear()
+    _simEvents.clear()
         
     _nextDataDefinitionIndex = 0
     _nextSimEventId = 0
@@ -206,56 +207,83 @@ def _disconnect():
     except Exception: 
         pass
         
-def _syncWrites():
+def _syncEvents():
     
     global _nextSimEventId
     
-    if not _datumvalueWrites:
+    if not _clientEvents:
         return
     
-    for datum, value in _datumvalueWrites:
+    for clientEvent, value in _clientEvents:
         
         # all writes have to be mapped to sim events
         try:
-            simEvent = _datum2simevent[datum]
+            simEvent = _simEvents[clientEvent]
         except KeyError:
             try:
                 simEvent = _nextSimEventId
-                _dll.SimConnect_MapClientEventToSimEvent(_hsimconnect, simEvent, ctypes.wintypes.LPCSTR(datum.encode()))
-                _datum2simevent[datum] = simEvent;
+                _dll.SimConnect_MapClientEventToSimEvent(_hsimconnect, simEvent, ctypes.wintypes.LPCSTR(clientEvent.encode()))
+                _simEvents[clientEvent] = simEvent;
                 _nextSimEventId += 1
-                _log.debug("Mapped %s to %s client event" % (datum, simEvent))
+                _log.debug("Mapped %s to %s client event" % (clientEvent, simEvent))
             except WindowsError:
-                _log.warning("Failed to map %s to %s client event" % (datum, simEvent))
+                _log.warning("Failed to map %s to %s client event" % (clientEvent, simEvent))
                 _log.debug(traceback.format_exc())
                 continue
                 
         # transmit
         try:
-            #SimConnect_TransmitClientEvent(self._simhandle, 0, var.id, ctypes.wintypes.DWORD(var.encode(var.value)), 1, 0x00000010)
-            #_dll.SimConnect_TransmitClientEvent(_hsimconnect, 0, simEvent, ctypes.wintypes.DWORD(value), 1, _SIMCONNECT_EVENT_FLAG_GROUPID_IS_PRIORITY)
             _dll.SimConnect_TransmitClientEvent(_hsimconnect, 0, simEvent, ctypes.wintypes.DWORD(value), 1, 0x00000010)
         except:
-            _log.warning("Failed to transmit client event %s for %s" % (simEvent, datum))
+            _log.warning("Failed to transmit client event %s for %s" % (simEvent, clientEvent))
             _log.debug(traceback.format_exc())
 
-    del _datumvalueWrites[:]
-       
-def _syncReads():
+    del _clientEvents[:]
+    
+def _syncSets():
+
+    try:
+        _dll.SimConnect_ClearDataDefinition(_hsimconnect, _WRITE_DATA_DEFINITION_ID)
+    except WindowsError:
+        _log.warning("Failed to clear data definition for setting %s (%s)" % (_sets, sys.exc_info()))
+        return
+    
+    class Data(ctypes.Structure):
+        _fields_ = [ ("values", ctypes.wintypes.DOUBLE * len(_sets)) ] 
+        
+    data = Data()
+    i = 0
+    
+    for datum, unit, value in _sets:
+        try:
+            _dll.SimConnect_AddToDataDefinition(_hsimconnect, _WRITE_DATA_DEFINITION_ID, ctypes.wintypes.LPCSTR(datum.encode()), ctypes.wintypes.LPCSTR(unit.encode()), _SIMCONNECT_DATATYPE_FLOAT64, 0, -1)
+        except WindowsError:
+            _log.warning("Failed to add data definition for %s (%s)" % (datum, sys.exc_info()))
+            return
+        data.values[i] = value
+        i += 1
+    try:
+        _dll.SimConnect_SetDataOnSimObject(_hsimconnect, _WRITE_DATA_DEFINITION_ID, 0, 0, i, ctypes.sizeof(ctypes.wintypes.DOUBLE), ctypes.byref(data))
+    except WindowsError:
+        _log.warning("Failed to set data on sim object (%s)" % sys.exc_info())
+     
+    del _sets[:]
+               
+def _syncVars():
     
     global _nextDataDefinitionIndex
     
     # bail if there are no vars in data definition
-    if len(_datumunit2value)==0:
+    if len(_var2value)==0:
         return
     
     # add to data definition where still needed
-    for datumunit in _datumunit2value:
+    for var in _var2value:
         
         try:
-            _datumunit2datadefinitionindex[ datumunit ]
+            _var2index[ var ]
         except KeyError:
-            datum, unit = datumunit
+            datum, unit = var
             try:
                 _dll.SimConnect_AddToDataDefinition(
                     _hsimconnect, 
@@ -265,7 +293,7 @@ def _syncReads():
                     _SIMCONNECT_DATATYPE_FLOAT64, 
                     0, 
                     -1)
-                _datumunit2datadefinitionindex[ datumunit ] = _nextDataDefinitionIndex
+                _var2index[ var ] = _nextDataDefinitionIndex
                 _log.debug("Added %s to SimConnect data definition index=%d" % (datum, _nextDataDefinitionIndex))
                 _nextDataDefinitionIndex += 1
             except WindowsError:
@@ -314,28 +342,31 @@ def _syncReads():
 
     # _READ_DATA_DEFINITION_ID - keep values
     pdata = ctypes.cast(precv.contents.dwData, ctypes.POINTER(ctypes.wintypes.DOUBLE))
-    for datumunit, index in _datumunit2datadefinitionindex.items():
+    for var, index in _var2index.items():
         if index>=precv.contents.dwDefineCount:
-            _log.debug("no data received for %s, %d>=%d" % (datumunit,index,precv.contents.dwDefineCount) )
+            _log.debug("no data received for %s, %d>=%d" % (var,index,precv.contents.dwDefineCount) )
             continue
-        _datumunit2value[datumunit] = pdata[index]
+        _var2value[var] = pdata[index]
 
 def get(datum, unit, decode=lambda x: x):
     try:
-        value = _datumunit2value[(datum,unit)]
+        value = _var2value[(datum,unit)]
         return decode(value) if value!=None else None 
     except KeyError:
-        _datumunit2value[(datum,unit)] = None
+        _var2value[(datum,unit)] = None
         return None
+    
+def set(datum, unit, value): #@ReservedAssignment
+    _sets.append( (datum,unit,value) )
 
-def set(datum, value=0, encode=lambda x: x): #@ReservedAssignment
+def send(event, value=0, encode=lambda x: x): #@ReservedAssignment
 
-    _datumvalueWrites.append( (datum,encode(value)) )    
+    _clientEvents.append( (event,encode(value)) )    
 
 def sync(): 
     
     # active?
-    if not _datumvalueWrites and not _datumunit2value:
+    if not _clientEvents and not _var2value and not _sets:
         return
     
     global _lastconnect
@@ -348,11 +379,14 @@ def sync():
             return
         _log.info("SimConnect established")
         
-    # do pending sets
-    _syncWrites()
+    # do pending events
+    _syncEvents()
     
+    # do sets
+    _syncSets()
+        
     # do reads
-    _syncReads()
+    _syncVars()
 
 _init()        
         

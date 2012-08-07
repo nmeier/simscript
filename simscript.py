@@ -95,13 +95,15 @@ def main(argv):
     level = logging.INFO
     hertz = 30
     try:
-        opts, args =  getopt.getopt(argv[1:], "h:d", ["hertz=","debug"])
+        opts, args =  getopt.getopt(argv[1:], "h:d", ["hertz=","debug","help"])
         for opt, arg in opts:
             if opt in ("-d", "--debug"):
                 level = logging.DEBUG
-            if opt in ("-h", "-hertz"):
+            if opt in ("-h", "--hertz"):
                 hertz = int(arg)
                 pass
+            if opt in ("--help"):
+                return usage()
     except Exception as e:
         return usage(str(e))
 

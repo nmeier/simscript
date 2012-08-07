@@ -21,14 +21,14 @@ SimRadarElevation = phidgets.encoder2axis(encoder1, 2)
 vjoy.setAxis(0, SimRadarElevation)
 vjoy.setButton(0, encoder1.getInputState(0))
 
-# encoder 2 for axis and button
+# encoder 2 for axis and button (SimToggleMissileCage)
 encoder2 = phidgets.get(82081)
 SimStepMissileVolume = phidgets.encoder2axis(encoder2, 1)
 SimToggleMissileCage = encoder2.getInputState(0)
 vjoy.setAxis(1, SimStepMissileVolume)
 vjoy.setButton(1, SimToggleMissileCage)
 
-# saitek axis 2 into 2 buttons
+# saitek axis 2 into 2 buttons (AFBrakesOut/AFBrakesIn)
 saitek = joysticks.get('Saitek Pro Flight Quadrant')
 speedbrake = saitek.getAxis(1)
 retract = speedbrake < -0.5
@@ -41,7 +41,7 @@ vjoy.setButton(2, extend)
 vjoy.setButton(3, retract)
 
 
-# saitek axis 3 into 2 buttons
+# saitek axis 3 into 2 buttons (AFGearUp, AFGearDown)
 handleDown = saitek.getAxis(2) > 0
 if handleDown: # let's not accidentially retract gear unless we've seen handle down first
     state.set("gear-seen-down", True)

@@ -93,7 +93,7 @@ def main(argv):
 
     # scan options
     level = logging.INFO
-    hertz = 50
+    hertz = 30
     try:
         opts, args =  getopt.getopt(argv[1:], "h:d", ["hertz=","debug"])
         for opt, arg in opts:

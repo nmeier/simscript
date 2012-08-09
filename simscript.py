@@ -83,7 +83,9 @@ class LogFile(logging.FileHandler):
         
     def show(self):
         self.hide()
-        tail = '"%s" "%s" "%s"' % (sys.executable, os.path.abspath("tail.py"), os.path.abspath(self._temp.name))
+        
+        #tail = '"%s" "%s" "%s"' % (, os.path.abspath("tail.py"), os.path.abspath(self._temp.name))
+        tail = '"%s" "%s" "%s"' % (sys.executable.replace('pythonw', 'python'), os.path.abspath("tail.py"), os.path.abspath(self._temp.name))
         log.debug("Launching %s", tail)
         self._tail = subprocess.Popen(tail, creationflags=0x00000010) # CREATE_NEW_CONSOLE
         self.reset()
@@ -91,7 +93,10 @@ class LogFile(logging.FileHandler):
     def hide(self):
         if not self._tail:
             return
-        self._tail.terminate()
+        try:
+            self._tail.terminate()
+        except:
+            pass
         self._tail = None
         
     def reset(self):

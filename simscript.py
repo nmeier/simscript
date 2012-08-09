@@ -39,8 +39,8 @@ class Script():
         if self.modified()>self.lastCompile:
             self.lastCompile = self.modified()
             try:
-                with open(self.file, 'r') as file:
-                    self.code = compile(file.read(), self.file, 'exec', dont_inherit=True)
+                with open(self.file, 'r') as handle:
+                    self.code = compile(handle.read(), self.file, 'exec', dont_inherit=True)
             except:
                 self.log.warning("compilation failed with %s" % traceback.format_exc())
                 self.code = None
@@ -69,6 +69,7 @@ class LogFile(logging.FileHandler):
         self.error = 0
         self.warn = 0
         self._temp = tempfile.NamedTemporaryFile(mode='w+', suffix='.log', prefix='simscript_', delete=False)
+        self._tail = None
         logging.FileHandler.__init__(self, self._temp.name, 'w+')
         self.setFormatter(logging.Formatter(logging.BASIC_FORMAT))
         
@@ -81,15 +82,24 @@ class LogFile(logging.FileHandler):
         logging.FileHandler.emit(self, record)
         
     def show(self):
-        subprocess.Popen("explorer %s" % self._temp.name)
+        self.hide()
+        tail = '"%s" "%s" "%s"' % (sys.executable, os.path.abspath("tail.py"), os.path.abspath(self._temp.name))
+        log.debug("Launching %s", tail)
+        self._tail = subprocess.Popen(tail, creationflags=0x00000010) # CREATE_NEW_CONSOLE
         self.reset()
+        
+    def hide(self):
+        if not self._tail:
+            return
+        self._tail.terminate()
+        self._tail = None
         
     def reset(self):
         self.warn = self.error = 0
         
 def main(argv):
 
-    global script, active
+    global script, active, log
 
     # scan options
     level = logging.INFO
@@ -176,8 +186,8 @@ def main(argv):
         
     def actions():
         actions = [("Quit", None, None, bbye), (logfile, None, None, logfile.show), ("Edit", None, None, edit)]
-        for file in filter(lambda n: n.endswith('.py'), os.listdir("scripts")):
-            actions.append( (file, None, script and os.path.basename(script.file)==file, lambda f=file: switch(f)) )
+        for handle in filter(lambda n: n.endswith('.py'), os.listdir("scripts")):
+            actions.append( (handle, None, script and os.path.basename(script.file)==handle, lambda f=handle: switch(f)) )
         return actions
     
     tray = windows.TrayIcon("SimScript", os.path.join(os.path.dirname(__file__), 'simscript.ico'), actions) if windows else None
@@ -203,7 +213,10 @@ def main(argv):
         if wait>=0 : 
             time.sleep(wait)
         else:  
-            log.warn("%s executions took longer than sync frequency (%dms>%dms)" % ( script, (1.0/hertz-wait)*1000, 1.0/hertz*1000))
+            log.info("%s executions took longer than sync frequency (%dms>%dms)" % ( script, (1.0/hertz-wait)*1000, 1.0/hertz*1000))
+                
+    # cleanup 
+    logfile.hide()
                 
     # done
     return 0    

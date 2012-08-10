@@ -4,13 +4,6 @@
 
 import sys,os,time,logging,tempfile,traceback,getopt,subprocess
 
-def classbyname(name):
-    parts = name.split('.')
-    m = __import__(".".join(parts[:-1]))
-    for p in parts[1:]:
-        m = getattr(m, p)            
-    return m
-
 def modulo(value,start,end):
     if value!=value: #NaN check
         return value
@@ -68,9 +61,9 @@ class LogFile(logging.FileHandler):
     def __init__(self):
         self.error = 0
         self.warn = 0
-        self._temp = tempfile.NamedTemporaryFile(mode='w+', suffix='.log', prefix='simscript_', delete=False)
+        self.file = tempfile.NamedTemporaryFile(mode='w+', suffix='.log', prefix='simscript_', delete=False)
         self._tail = None
-        logging.FileHandler.__init__(self, self._temp.name, 'w+')
+        logging.FileHandler.__init__(self, self.file.name, 'w+')
         self.setFormatter(logging.Formatter(logging.BASIC_FORMAT))
         
     def __str__(self):
@@ -83,10 +76,8 @@ class LogFile(logging.FileHandler):
         
     def show(self):
         self.hide()
-        
-        #tail = '"%s" "%s" "%s"' % (, os.path.abspath("tail.py"), os.path.abspath(self._temp.name))
-        tail = '"%s" "%s" "%s"' % (sys.executable.replace('pythonw', 'python'), os.path.abspath("tail.py"), os.path.abspath(self._temp.name))
-        log.debug("Launching %s", tail)
+        tail = '"%s" "%s" "%s"' % (sys.executable.replace('pythonw', 'python'), os.path.abspath("tail.py"), os.path.abspath(self.file.name))
+        log.info("Launching %s", tail)
         self._tail = subprocess.Popen(tail, creationflags=0x00000010) # CREATE_NEW_CONSOLE
         self.reset()
         
@@ -123,12 +114,12 @@ def main(argv):
         return usage(str(e))
 
     # setup logging 
-    logfile = LogFile()
-    
     logging.basicConfig(level=level, stream=sys.stdout)
-    logging.getLogger().addHandler(logfile)
-    
     log = logging.getLogger(os.path.splitext(os.path.basename(argv[0]))[0])
+    
+    logfile = LogFile()
+    log.info("Logging to %s" % logfile.file.name)
+    logging.getLogger().addHandler(logfile)
    
     # windows support?
     try:
@@ -195,7 +186,7 @@ def main(argv):
             actions.append( (handle, None, script and os.path.basename(script.file)==handle, lambda f=handle: switch(f)) )
         return actions
     
-    tray = windows.TrayIcon("SimScript", os.path.join(os.path.dirname(__file__), 'simscript.ico'), actions) if windows else None
+    tray = windows.TrayIcon("SimScript", os.path.abspath('simscript.ico'), actions) if windows else None
 
     # loop
     active = True

@@ -76,10 +76,16 @@ class LogFile(logging.FileHandler):
         
     def show(self):
         self.hide()
+        
+        # either deployed tail.exe, interpreting python (not pythonw) or fallback notepad
+        tail = 'notepad "%s"' %  os.path.abspath(self.file.name)
         if os.path.isfile("tail.exe"):
             tail = 'tail.exe "%s"' %  os.path.abspath(self.file.name)
-        else:
-            tail = '"%s" "%s" "%s"' % (sys.executable.replace('pythonw', 'python'), os.path.abspath("tail.py"), os.path.abspath(self.file.name))
+        elif 'python' in sys.executable:
+            python = sys.executable.replace('pythonw', 'python')
+            if os.path.isfile(python):
+                tail = '"%s" "%s" "%s"' % (python, os.path.abspath("tail.py"), os.path.abspath(self.file.name))
+            
         log.info("Launching %s", tail)
         self._tail = subprocess.Popen(tail, creationflags=0x00000010) # CREATE_NEW_CONSOLE
         self.reset()

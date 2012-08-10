@@ -1,5 +1,5 @@
 ''' Phidget abstraction layer '''
-import logging, traceback, simscript
+import logging, traceback
 
 from Phidgets.Manager import Manager
 from Phidgets import Devices
@@ -59,7 +59,7 @@ def _phidget(serial):
             try:
                 ptype = "Phidgets.Devices."+Devices.__all__[device.getDeviceClass()]+"."+Devices.__all__[device.getDeviceClass()]
                 _log.debug("Trying class %s for #%s" % (ptype, device.getSerialNum()))
-                phidget = simscript.classbyname(ptype)()
+                phidget = _classbyname(ptype)()
             except:
                 _log.debug(traceback.format_exc())
                 raise EnvironmentError("No specific wrapper for wrapper %s can be found" % phidget.getDeviceType)
@@ -72,6 +72,13 @@ def _phidget(serial):
             return phidget
         
     raise EnvironmentError("phidgets.get(%s) is not connected" % serial)
+
+def _classbyname(name):
+    parts = name.split('.')
+    m = __import__(".".join(parts[:-1]))
+    for p in parts[1:]:
+        m = getattr(m, p)            
+    return m
 
 def all(): #@ReservedAssignment
             

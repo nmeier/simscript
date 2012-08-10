@@ -6,9 +6,7 @@ if __name__ == '__main__':
         print("usage: tail.py filename")
         sys.exit(1)
         
-    file = os.path.abspath(sys.argv[1]) 
-    
-    handle = open(file,'r')
+    handle = open(os.path.abspath(sys.argv[1]),'r')
 
     try:
         while 1:
@@ -18,6 +16,6 @@ if __name__ == '__main__':
                 time.sleep(0.5)
                 handle.seek(where)
             else:
-                print(line, end='')
+                sys.stdout.write(line)
     except:
-        print("Exiting")
+        pass

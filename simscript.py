@@ -76,7 +76,10 @@ class LogFile(logging.FileHandler):
         
     def show(self):
         self.hide()
-        tail = '"%s" "%s" "%s"' % (sys.executable.replace('pythonw', 'python'), os.path.abspath("tail.py"), os.path.abspath(self.file.name))
+        if os.path.isfile("tail.exe"):
+            tail = 'tail.exe "%s"' %  os.path.abspath(self.file.name)
+        else:
+            tail = '"%s" "%s" "%s"' % (sys.executable.replace('pythonw', 'python'), os.path.abspath("tail.py"), os.path.abspath(self.file.name))
         log.info("Launching %s", tail)
         self._tail = subprocess.Popen(tail, creationflags=0x00000010) # CREATE_NEW_CONSOLE
         self.reset()
@@ -120,6 +123,8 @@ def main(argv):
     logfile = LogFile()
     log.info("Logging to %s" % logfile.file.name)
     logging.getLogger().addHandler(logfile)
+
+    log.info("Python %s" % sys.version)
    
     # windows support?
     try:

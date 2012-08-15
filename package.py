@@ -25,5 +25,8 @@ options = {
 }
 
 data_files = make_data_files(['contrib', 'modules', 'simscript.ico'])
+
+simscript = {'script':'simscript.py', 'dest_base':'simscript',  'icon_resources':[(1,"simscript.ico")]}
+tail = {'script':'tail.py'}
  
-distutils.core.setup(console=['tail.py'], windows=[ {'script':'simscript.py', 'icon_resources':[(1,"simscript.ico")]} ], options={'py2exe' :options}, data_files=data_files)
+distutils.core.setup(console=[tail], windows=[simscript], options={'py2exe' :options}, data_files=data_files)

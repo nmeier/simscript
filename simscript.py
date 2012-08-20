@@ -102,6 +102,19 @@ class LogFile(logging.FileHandler):
     def reset(self):
         self.warn = self.error = 0
         
+class LoggerAsStream:
+    def __init__(self, logger, level):
+        self._logger = logger
+        self._level = level
+        self._buffer = ''
+    def write(self, buf):
+        for line in buf.splitlines(True):
+            if '\n' in line:
+                self._logger.log(self._level, self._buffer + line.rstrip())
+                self._buffer = ''
+            else:
+                self._buffer += line
+            
 def main(argv):
 
     global script, active, log
@@ -131,7 +144,10 @@ def main(argv):
     logging.getLogger().addHandler(logfile)
 
     log.info("Python %s" % sys.version)
-   
+
+    sys.stderr = LoggerAsStream(logging.getLogger("STDOUT"), logging.INFO)
+    sys.stdout = LoggerAsStream(logging.getLogger("STDERR"), logging.INFO)
+       
     # windows support?
     try:
         import windows

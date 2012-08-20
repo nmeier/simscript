@@ -8,9 +8,11 @@ def make_data_files(roots):
         if os.path.isdir(root):
             for dirpath, dirnames, filenames in os.walk(root, True, None, False):
                 if filenames:
-                    data.append( (dirpath, [os.path.join(dirpath, f) for f in filenames]) )
+                    data.append( (dirpath, [os.path.join(dirpath, f) for f in filenames if not '.pyc' in f]) )
                 if '__pycache__' in dirnames:
                     dirnames.remove('__pycache__')
+                if '.svn' in dirnames:
+                    dirnames.remove('.svn')
         else:
             data.append( ('', [root]) )
     return data
@@ -20,7 +22,8 @@ def make_data_files(roots):
 options = {
   "dist_dir": "build/dist",
   "includes": ["ctypes", "ctypes.wintypes", "decimal"], 
-  "excludes": [], 
+  "excludes" : [],
+  "dll_excludes": ["w9xpopen.exe"], 
   "packages": []
 }
 

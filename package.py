@@ -24,7 +24,7 @@ options = {
   "packages": []
 }
 
-data_files = make_data_files(['contrib', 'modules', 'simscript.ico'])
+data_files = make_data_files(['contrib', 'modules', 'scripts', 'simscript.ico'])
 
 simscript = {'script':'simscript.py', 'dest_base':'simscript',  'icon_resources':[(1,"simscript.ico")]}
 tail = {'script':'tail.py'}

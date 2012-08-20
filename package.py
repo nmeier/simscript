@@ -1,6 +1,22 @@
-import distutils.core, os, py2exe
+import distutils.core, shutil, os, py2exe, subprocess, re
 
+# check revision
+svnversion = 'XXX'
+try:
+    svnversion = str(subprocess.check_output("svnversion")).strip()
+except:
+    print("Failed to determine revision - is svnversion in path?")
+    pass
+try:
+    svnversion = int(svnversion)
+    print("Source @ revision %s" % svnversion)
+except:
+    print("Source @ modified revision %s" % svnversion)
+    
+# clean up
+shutil.rmtree('build')
 
+# calculate extra files
 def make_data_files(roots):
     data = []
     
@@ -33,3 +49,5 @@ simscript = {'script':'simscript.py', 'dest_base':'simscript',  'icon_resources'
 tail = {'script':'tail.py'}
  
 distutils.core.setup(console=[tail], windows=[simscript], options={'py2exe' :options}, data_files=data_files)
+
+shutil.make_archive('build/simscript-r%s' % svnversion, 'zip', 'build/dist', '.')

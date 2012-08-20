@@ -11,6 +11,7 @@ try:
     svnversion = int(svnversion)
     print("Source @ revision %s" % svnversion)
 except:
+    svnversion = svnversion.replace(':', '-')
     print("Source @ modified revision %s" % svnversion)
     
 # clean up

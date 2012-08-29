@@ -15,18 +15,19 @@ import joysticks, phidgets, state, log
 
 vjoy = joysticks.get('vJoy Device')
 
-# encoder 1 for axis and button
+# encoder 1 for axis (two rotations) and button
 encoder1 = phidgets.get(82141)
-SimRadarElevation = phidgets.encoder2axis(encoder1, 2)
-vjoy.setAxis(0, SimRadarElevation)
-vjoy.setButton(0, encoder1.getInputState(0))
+axisFromEncoder1 = phidgets.encoder2axis(encoder1, 2)
+buttonFromEncoder1 = encoder1.getInputState(0)
+vjoy.setAxis(0, axisFromEncoder1)
+vjoy.setButton(0, buttonFromEncoder1)
 
-# encoder 2 for axis and button (SimToggleMissileCage)
+# encoder 2 for axis (one rotation) and button 
 encoder2 = phidgets.get(82081)
-SimStepMissileVolume = phidgets.encoder2axis(encoder2, 1)
-SimToggleMissileCage = encoder2.getInputState(0)
-vjoy.setAxis(1, SimStepMissileVolume)
-vjoy.setButton(1, SimToggleMissileCage)
+axisFromEncoder2 = phidgets.encoder2axis(encoder2, 1)
+buttonFromEncoder2 = encoder2.getInputState(0)
+vjoy.setAxis(1, axisFromEncoder2)
+vjoy.setButton(1, buttonFromEncoder2)
 
 # saitek axis 2 into 2 buttons (AFBrakesOut/AFBrakesIn)
 saitek = joysticks.get('Saitek Pro Flight Quadrant')
@@ -42,10 +43,10 @@ vjoy.setButton(3, retract)
 
 
 # saitek axis 3 into 2 buttons (AFGearUp, AFGearDown)
-handleDown = saitek.getAxis(2) > 0
+handleDown = saitek.getAxis(2) > 0.25
 if handleDown: # let's not accidentially retract gear unless we've seen handle down first
     state.set("gear-seen-down", True)
-handleUp = not handleDown and state.get("gear-seen-down")
+handleUp = saitek.getAxis(2) < -0.25 and state.get("gear-seen-down")
 if state.set("gear", handleUp) != handleUp:
     log.info("Gear handle %s", ("down" if handleDown else "up"))
 vjoy.setButton(4, handleUp)

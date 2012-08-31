@@ -8,6 +8,7 @@ __version__ = '2.1.8'
 __date__ = 'May 17 2010'
 
 from Phidgets.Common import prepOutput
+from Phidgets.PhidgetLibrary import PhidgetLibrary
 import threading
 from ctypes import *
 import Phidgets.Common

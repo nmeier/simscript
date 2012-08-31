@@ -13,14 +13,14 @@ for j in range(0, joysticks.numJoysticks()) :
         now = joy.getButton(b)
         was = state.set(key, now)
         if now and not was:
-            log.info("joystick button pressed - %s = True" % (key))
+            log.info("joystick %d button pressed - %s = True" % (j, key))
 
     for a in range(0, joy.numAxis()) :
         key = "joysticks.get('%s').axis(%d)" % (joy.name, a)
         now = joy.getAxis(a)
         was = state.get(key, 0)
         if abs(was-now) > 0.1 :
-            log.info("joystick axis moved - %s = %.1f" % (key, now) )
+            log.info("joystick %d axis moved - %s = %.1f" % (j, key, now) )
             state.set(key, now)
 
 # debug phidgets 

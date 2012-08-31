@@ -25,22 +25,17 @@ class PhidgetException(Exception):
         Exception
     """
     def __init__(self, code):
-        if sys.platform == 'win32':
-            self.dll = windll.LoadLibrary("phidget21.dll")
-        elif sys.platform == 'darwin':
-            self.dll = cdll.LoadLibrary("/Library/Frameworks/Phidget21.framework/Versions/Current/Phidget21")
-        elif sys.platform == 'linux2':
-            self.dll = cdll.LoadLibrary("libphidget21.so.0")
-        else:
-            self.dll = None
-            print("Platform not supported")
         
+        self.dll = PhidgetLibrary.getDll()
         if(self.dll != None):
             self.code = code
             description = c_char_p()
             result = self.dll.CPhidget_getErrorDescription(c_int(code), byref(description))
             self.details = prepOutput(description)
     
+    def __str__(self):
+        return self.details
+
     @staticmethod
     def getErrorDescription(self, code):
         """

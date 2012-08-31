@@ -1,5 +1,5 @@
 ''' Phidget abstraction layer '''
-import logging, traceback
+import logging, traceback, time
 
 from Phidgets.Manager import Manager
 from Phidgets import Devices
@@ -23,14 +23,14 @@ class __PhidgetWrapper:
 
 def _init():
 
-    global _log, _serial2phidgets, _manager, _encoderHistory
+    global _log, _serial2phidgets, _manager, _encoderHistory, _lastPollDevices
+
         
     _log = logging.getLogger("phidgets")
     _serial2phidgets = dict()
     _encoderHistory = dict()
+    _lastPollDevices = 0
 
-    PhidgetException.__str__ = lambda self: self.details
-    
     try:
         _manager = Manager()
         _manager.openManager()
@@ -81,12 +81,17 @@ def _classbyname(name):
     return m
 
 def all(): #@ReservedAssignment
+    
+    global _lastPollDevices
+    if time.clock() - _lastPollDevices > 3:
+        if _manager:   
+            for p in _manager.getAttachedDevices():
+                _phidget(p.getSerialNum()) 
             
-    if not _manager:   
-        return []
-   
-    return [ _phidget(p.getSerialNum()) for p in _manager.getAttachedDevices()]
+        _lastPollDevices = time.clock()
 
+    return _serial2phidgets.values()
+            
 
 def get(serial):
 

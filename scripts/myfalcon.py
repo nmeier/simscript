@@ -1,6 +1,10 @@
 # 
 # My setup consists of:
 #
+#  CH Combatstick USB
+#   Map zoom toggle button into FOV axis w/two positions
+#   Map push button into Teamspeak PTT
+#   Map toggle button into Freetrack Reset
 #  Saitek Thottle Quadrant
 #   Split 2nd Axis into 2 Buttons (Speedbrake Extend/Retract)
 #   Split 3rd Axis into 2 Buttons (Gear Up/Down)
@@ -29,15 +33,15 @@ if state.toggle("zoom-toggle", combatstick.getButton(2) and not shift) or zoomed
     state.set("zoomedout", not zoomedout)
 
 # combatstick shifted button for Freetrack reset
-FREETRACK_KEY = "CTRL SHIFT ALT F"
+FREETRACK_KEY = "CONTROL SHIFT F"
 if state.toggle("freetrack-toggle", combatstick.getButton(2) and shift):
     keyboard.click(FREETRACK_KEY)
 
 # combatstick button for Teamspeak PTT
-TEAMSPEAK_KEY = '~'
+TEAMSPEAK_KEY = '`'
 ptt = combatstick.getButton(4)
 optt = state.set("ptt", ptt)
-if ptt!=optt and not shift:
+if ptt != optt and not shift:
     if ptt: keyboard.press(TEAMSPEAK_KEY)
     else: keyboard.release(TEAMSPEAK_KEY)
 
@@ -67,7 +71,7 @@ AIRBREAK_IN_BUTTON = 3
 saitek = joysticks.get('Saitek Pro Flight Quadrant')
 speedbrake = saitek.getAxis(1)
 retract = speedbrake < -0.5
-extend = speedbrake >  0.5
+extend = speedbrake > 0.5
 if state.set("sbe", extend) != extend and extend:
     log.info("extending speed brakes")
 if state.set("sbr", retract) != retract and retract:

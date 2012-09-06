@@ -119,32 +119,48 @@ VK_RMENU      = 0xA5
 VK_PLAY      = 0xFA 
 VK_ZOOM      = 0xFB 
 
-class KeyInput(ctypes.Structure):
-    _fields_ = [("type", ctypes.c_ulong),
-                ("wVk", ctypes.c_ushort),
-                ("wScan", ctypes.c_ushort),
-                ("dwFlags", ctypes.c_ulong),
-                ("time", ctypes.c_ulong),
-                ("dwExtraInfo", ctypes.POINTER(ctypes.c_ulong))]
-    def __init__(self):
-        self.type = 1
-        self.time = 0
-        self.extra = ctypes.c_ulong(0)
-        self.dwExtraInfo = ctypes.pointer(self.extra)
-        
-    def setVK(self, vk):
-        self.wVk = vk
-        self.wScan = 0
-        self.dwFlags = 0
-        
-    def setKeyDown(self):
-        self.dwFlags = 0
-    
-    def setKeyUp(self):
-        self.dwFlags = 2
+_WORD = ctypes.c_ushort
+_DWORD = ctypes.c_ulong
+_LONG = ctypes.c_long
+_ULONG_PTR = ctypes.POINTER(_DWORD)
 
-_keyInput = KeyInput()
+_KEYEVENTF_EXTENDEDKEY = 0x0001
+_KEYEVENTF_KEYUP = 0x0002
+_KEYEVENTF_SCANCODE = 0x0008
+_KEYEVENTF_UNICODE = 0x0004
 
+_INPUT_MOUSE = 0
+_INPUT_KEYBOARD = 1
+_INPUT_HARDWARD = 2
+
+class _MOUSEINPUT(ctypes.Structure):
+    _fields_ = (('dx', _LONG),
+                ('dy', _LONG),
+                ('mouseData', _DWORD),
+                ('dwFlags', _DWORD),
+                ('time', _DWORD),
+                ('dwExtraInfo', _ULONG_PTR))
+
+class _HARDWAREINPUT(ctypes.Structure):
+    _fields_ = (('uMsg', _DWORD),
+                ('wParamL', _WORD),
+                ('wParamH', _WORD))
+
+class _KEYBDINPUT(ctypes.Structure):
+    _fields_ = (("wVk", _WORD),  
+                ("wScan", _WORD),
+                ("dwFlags", _DWORD),
+                ("time", _DWORD), 
+                ("dwExtraInfo", _ULONG_PTR))
+
+class _INPUTUNION(ctypes.Union):
+    _fields_ = (('mi', _MOUSEINPUT),
+                ('ki', _KEYBDINPUT),
+                ('hi', _HARDWAREINPUT))
+
+class _INPUT(ctypes.Structure):
+    _fields_ = (('type', _DWORD),
+               ('union', _INPUTUNION))
 
 def _sendModifiers(mods, press):
     if mods & 0x01:
@@ -155,15 +171,9 @@ def _sendModifiers(mods, press):
         _sendVirtual(0x12, press)
 
 def _sendVirtual(vk, press=True):
-    
-    _keyInput.setVK(vk)
-    
-    if press:
-        _keyInput.setKeyDown()
-    else:
-        _keyInput.setKeyUp()
-
-    ctypes.windll.user32.SendInput(1, ctypes.byref(_keyInput), 28)
+    keybdinput =_KEYBDINPUT(vk, ctypes.windll.user32.MapVirtualKeyA(vk, 0), 0 if press else _KEYEVENTF_KEYUP)
+    input = _INPUT(_INPUT_KEYBOARD, _INPUTUNION(ki=keybdinput))
+    ctypes.windll.user32.SendInput(1, ctypes.byref(input), ctypes.sizeof(input))
 
 def _sendScanCode(scanCode, press=True):
     scanned = ctypes.windll.user32.VkKeyScanA(ord(scanCode))
@@ -211,3 +221,8 @@ def release(c):
 
 def sync():
     pass
+
+
+
+
+

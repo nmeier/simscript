@@ -1,4 +1,4 @@
-import ctypes
+import ctypes, time
 
 VK_LBUTTON      = 0x1
 VK_RBUTTON      = 0x2
@@ -209,8 +209,10 @@ def _send(key, press=True):
         
     raise Exception("unsupported key %s" % key)
 
-def click(c):
+def click(c, delay=0.05):
     _send(c, True)
+    if delay>0:
+        time.sleep(delay)
     _send(c, False)
 
 def press(c):

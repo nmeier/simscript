@@ -121,7 +121,7 @@ def main(argv):
 
     # scan options
     level = logging.INFO
-    hertz = 30
+    hertz = 20
     try:
         opts, args =  getopt.getopt(argv[1:], "h:d", ["hertz=","debug","help"])
         for opt, arg in opts:
@@ -235,7 +235,7 @@ def main(argv):
         wait = sync-time.clock()
         if wait>=0 : 
             time.sleep(wait)
-        else:  
+        else:
             log.info("%s executions took longer than sync frequency (%dms>%dms)" % ( script, (1.0/hertz-wait)*1000, 1.0/hertz*1000))
                 
     # cleanup 

@@ -134,6 +134,11 @@ def encoder2axis(encoder, revolutions=1):
     
     return (pos-lower) / float(upper-lower) * 2 - 1
 
+def axis2encoder(axis, encoder, revolutions=1):
+    pos = encoder.getPosition(0)
+    lower = pos - int(revolutions*_ENCODER_TICKS_PER_REVOLUTION) * axis
+    _encoderHistory[ (encoder,"axis_start") ] = lower
+
 ''' translates a boundless encoder positions to increments per revolution '''
 def encoder2delta(encoder, ticks=8):
     

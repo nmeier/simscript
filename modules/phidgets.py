@@ -25,7 +25,6 @@ def _init():
 
     global _log, _serial2phidgets, _manager, _encoderHistory, _lastPollDevices
 
-        
     _log = logging.getLogger("phidgets")
     _serial2phidgets = dict()
     _encoderHistory = dict()
@@ -110,47 +109,44 @@ def flatten(phidget):
 def sync():
     pass
 
-''' 
-    l<v<u returns l<v<u
-    l<u<v returns l<v=u
-    v<l<u returns l=v<u
-'''
-def _rerange(lower, value, upper):
-    if value>upper:
-        return value-(upper-lower), value, value
-    elif value<lower:
-        return value, value, value+(upper-lower)
-    return lower, value, upper
+class Axis:
+    def __init__(self, encoder, revolutions=1):
+        self._encoder = encoder
+        self._revolutions = revolutions
+    def getPosition(self):
+        pos = self._encoder.getPosition(0)
+        key = (self._encoder,"axis")
+        lower = _encoderHistory.get(key, pos)
+        upper = lower + int(self._revolutions*_ENCODER_TICKS_PER_REVOLUTION)
+        lower, pos, upper = Axis._rerange(lower, pos, upper)
+        _encoderHistory[key] = lower
+        return (pos-lower) / float(upper-lower) * 2 - 1
+    ''' 
+        l<v<u returns l<v<u
+        l<u<v returns l<v=u
+        v<l<u returns l=v<u
+    '''
+    def _rerange(lower, value, upper):
+        if value>upper:
+            return value-(upper-lower), value, value
+        elif value<lower:
+            return value, value, value+(upper-lower)
+        return lower, value, upper
 
-''' translates a boundless encoder position to an axis for given number of revolutions '''
-def encoder2axis(encoder, revolutions=1):
-    pos = encoder.getPosition(0)
-    lower = _encoderHistory.get( (encoder,"axis_start") , pos)
-    upper = lower + int(revolutions*_ENCODER_TICKS_PER_REVOLUTION)
-
-    lower, pos, upper = _rerange(lower, pos, upper)
-    
-    _encoderHistory[ (encoder,"axis_start") ] = lower
-    
-    return (pos-lower) / float(upper-lower) * 2 - 1
-
-def axis2encoder(axis, encoder, revolutions=1):
-    pos = encoder.getPosition(0)
-    lower = pos - int(revolutions*_ENCODER_TICKS_PER_REVOLUTION) * axis
-    _encoderHistory[ (encoder,"axis_start") ] = lower
+    def setPosition(self, pos):
+        now = self._encoder.getPosition(0)
+        _encoderHistory[ (self._encoder,"axis") ] = now - int( self._revolutions*_ENCODER_TICKS_PER_REVOLUTION*(pos+1)/2 )
+        
 
 ''' translates a boundless encoder positions to increments per revolution '''
-def encoder2delta(encoder, ticks=8):
-    
-    key = (encoder,"current_tick")
-    
+def delta(encoder, ticks=8):
     # pos has to move to one of the 'click' areas
     pos = int(encoder.getPosition(0) / (_ENCODER_TICKS_PER_REVOLUTION/ticks/2) )
-    
     if pos&1:
         return 0
     pos >>= 1
     # calculate delta to current position
+    key = (encoder, "delta")
     delta = _encoderHistory.get(key, pos) - pos
     _encoderHistory[key] = pos
     return delta

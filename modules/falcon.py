@@ -105,10 +105,10 @@ def sync():
 
 def _connect():
     
+    global _falconSharedMemory, _pFlightData
+    
     if _pFlightData:
         return
-    
-    global _falconSharedMemory, _pFlightData
     
     _falconSharedMemory = ctypes.windll.kernel32.OpenFileMappingA(FILE_MAP_READ|FILE_MAP_WRITE, False, "FalconSharedMemoryArea".encode())
     if not _falconSharedMemory:
@@ -128,8 +128,7 @@ def _disconnect():
     
 
 def flightData():
-    _connect()
-    return _pFlightData.contents    
+    return _pFlightData.contents if _connect() else None    
 
 def init():
     pass

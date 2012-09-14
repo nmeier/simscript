@@ -107,16 +107,18 @@ def _connect():
     
     global _falconSharedMemory, _pFlightData
     
-    if _pFlightData:
-        return
+    if _pFlightData != None:
+        return True
     
     _falconSharedMemory = ctypes.windll.kernel32.OpenFileMappingA(FILE_MAP_READ|FILE_MAP_WRITE, False, "FalconSharedMemoryArea".encode())
     if not _falconSharedMemory:
         _log.info("No Falcon shared memory found")
-        return
+        return False
 
     ctypes.windll.kernel32.MapViewOfFile.restype = ctypes.POINTER(FLIGHTDATA)
     _pFlightData = ctypes.windll.kernel32.MapViewOfFile(_falconSharedMemory, FILE_MAP_READ|FILE_MAP_WRITE, 0, 0, 0)
+
+    return True
 
 def _disconnect():
     global _falconSharedMemory, _pFlightData

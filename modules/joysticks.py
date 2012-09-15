@@ -34,8 +34,16 @@ class Joystick:
     def numAxis(self):
         return _sdl.SDL_JoystickNumAxes(self._handle) if self._handle else 0
 
-    def getAxis(self, i):
-        return _sdl.SDL_JoystickGetAxis(self._handle, i) / 32767  if self._handle else 0
+    def getAxis(self, i, deadzone=0.01):
+        if not self._handle:
+            return 0
+        val = _sdl.SDL_JoystickGetAxis(self._handle, i) / 32767
+        deadzone = abs(deadzone)
+        if val < -1+deadzone:
+            val = -1
+        if val > 1-deadzone:
+            val =  1
+        return val 
     
     def setAxis(self, a, value):
         raise EnvironmentError("%s is not a virtual voystick" % self.name)

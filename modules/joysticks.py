@@ -7,6 +7,10 @@ class Joystick:
     
     def __init__(self, nameOrIndex):
         
+        self._axishistory = []
+        for i in range(16):
+            self._axishistory.append([]) 
+       
         if isinstance(nameOrIndex, int):
             if nameOrIndex < numJoysticks():
                 index = nameOrIndex
@@ -34,7 +38,7 @@ class Joystick:
     def numAxis(self):
         return _sdl.SDL_JoystickNumAxes(self._handle) if self._handle else 0
 
-    def getAxis(self, i, deadzone=0.01):
+    def getAxis(self, i, deadzone=0.01, smoothing=1):
         if not self._handle:
             return 0
         val = _sdl.SDL_JoystickGetAxis(self._handle, i) / 32767
@@ -43,6 +47,18 @@ class Joystick:
             val = -1
         if val > 1-deadzone:
             val =  1
+
+        history = self._axishistory[i]             
+        history.append(val)
+        if len(history)>smoothing:
+            del history[0:len(history)-smoothing]
+        
+        if smoothing>1:
+            val = 0
+            for v in history:
+                val += v
+            val = val / len(history)
+        
         return val 
     
     def setAxis(self, a, value):

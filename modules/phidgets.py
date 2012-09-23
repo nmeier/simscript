@@ -23,12 +23,14 @@ class __PhidgetWrapper:
 
 def _init():
 
-    global _log, _serial2phidgets, _manager, _encoderHistory, _lastPollDevices
+    global _log, _serial2phidgets, _manager, _encoderHistory, _encoderAsAxis, _lastPollDevices, _sync
 
     _log = logging.getLogger("phidgets")
     _serial2phidgets = dict()
     _encoderHistory = dict()
+    _encoderAsAxis = dict()
     _lastPollDevices = 0
+    _sync = 0
 
     try:
         _manager = Manager()
@@ -107,48 +109,67 @@ def flatten(phidget):
     return "%s #%s" % (phidget.getDeviceName(), phidget.getSerialNum())
 
 def sync():
-    pass
 
-class Axis:
-    def __init__(self, encoder, revolutions=1):
-        self._encoder = encoder
-        self._revolutions = revolutions
-    def getPosition(self):
-        pos = self._encoder.getPosition(0)
-        key = (self._encoder,"axis")
-        lower = _encoderHistory.get(key, pos)
-        upper = lower + int(self._revolutions*_ENCODER_TICKS_PER_REVOLUTION)
-        lower, pos, upper = Axis._rerange(lower, pos, upper)
-        _encoderHistory[key] = lower
-        return (pos-lower) / float(upper-lower) * 2 - 1
-    ''' 
-        l<v<u returns l<v<u
-        l<u<v returns l<v=u
-        v<l<u returns l=v<u
-    '''
-    def _rerange(lower, value, upper):
-        if value>upper:
-            return value-(upper-lower), value, value
-        elif value<lower:
-            return value, value, value+(upper-lower)
-        return lower, value, upper
+    global _sync
+    
+    # look for unwatched encoder axis that need to be re-aligned b/o rotated encoder
+    for ((encoder,key), (sync, datum, old)) in _encoderAsAxis.items():
+        if sync == _sync:
+            continue
+        new = encoder.getPosition(0)
+        if new == old:
+            continue
+        _encoderAsAxis[(encoder,key)] = (_sync+1, datum+new-old, new)
 
-    def setPosition(self, pos):
-        now = self._encoder.getPosition(0)
-        _encoderHistory[ (self._encoder,"axis") ] = now - int( self._revolutions*_ENCODER_TICKS_PER_REVOLUTION*(pos+1)/2 )
-        
+    # next sync    
+    _sync += 1
+    
+
+'''
+   returns an axis value -1<=v<=1 for a given encoder
+'''
+def getAxis(encoder, key=None, revolutions=1, default=0):
+    
+    pos = encoder.getPosition(0)
+    
+    key = (encoder, key)
+    
+    range = revolutions*_ENCODER_TICKS_PER_REVOLUTION
+    
+    if not key in _encoderAsAxis:
+        value = default
+        datum = pos + int( float(range)/2 * default)
+    else:
+        _,datum,_ = _encoderAsAxis.get(key)
+        datum, pos, _ = _rerange(datum, pos, datum + int(range))
+        value = (pos-datum) / float(range) * 2 - 1
+
+    _encoderAsAxis[key] = (_sync, datum, pos)
+    
+    return value
+
+''' 
+    l<v<u returns l<v<u
+    l<u<v returns l<v=u
+    v<l<u returns l=v<u
+'''
+def _rerange(lower, value, upper):
+    if value>upper:
+        return value-(upper-lower), value, value
+    elif value<lower:
+        return value, value, value+(upper-lower)
+    return lower, value, upper
 
 ''' translates a boundless encoder positions to increments per revolution '''
-def delta(encoder, ticks=8):
+def getDelta(encoder, ticks=8):
     # pos has to move to one of the 'click' areas
     pos = int(encoder.getPosition(0) / (_ENCODER_TICKS_PER_REVOLUTION/ticks/2) )
     if pos&1:
         return 0
     pos >>= 1
     # calculate delta to current position
-    key = (encoder, "delta")
-    delta = _encoderHistory.get(key, pos) - pos
-    _encoderHistory[key] = pos
+    delta = _encoderHistory.get(encoder, pos) - pos
+    _encoderHistory[encoder] = pos
     return delta
 
 _init()

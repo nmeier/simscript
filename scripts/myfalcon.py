@@ -36,7 +36,7 @@ if state.toggle("zoom-toggle", combatstick.getButton(2) and not shift) or zoomed
 if zoomedout:
     zoom = ZOOM_MIN
 else: # pedals right for zoom past ZOOM_MAX
-    zoom = ZOOM_MAX - (pedals.getAxis(1,0.25)+1)/2
+    zoom = ZOOM_MAX - (pedals.getAxis(1,0.25, 10)+1)/2
 vjoy.setAxis(ZOOM_AXIS, zoom)
 
 # combatstick shifted button for Freetrack reset
@@ -52,35 +52,46 @@ if ptt != optt and not shift:
     if ptt: keyboard.press(TEAMSPEAK_KEY)
     else: keyboard.release(TEAMSPEAK_KEY)
 
-# encoder 1 for hsi hdg/course inc/dec
-# Note: atm the only way to click hdg/crs up or down is to send multiple subsequent keyboard presses
-#       for each respective gauge modifier (-/+)1, (-/+)5 respectively
-#       I'm keeping track of the desired delta from encoder rotation and send only one keystroke per
-#       sync making sure that the call doesn't take too long and that (c)cw rotation stops fast if
-#       changing direction. Keys for 1/5 increment allow for two speeds to catch up.  
-tuner = phidgets.get(82141)
-dial = 'hdg' if not tuner.getInputState(0) else 'crs'
-delta = phidgets.delta(tuner, 45) + state.get(dial, 0)
-if delta!=0:
-    if delta>=5: inc = 5
-    elif delta>=1: inc = 1
-    elif delta>-5: inc = -1
-    else: inc = -5
-    delta -= inc
-    keys = { "hdg-1":"CTRL ALT V", "hdg+1":"CTRL ALT B", "hdg-5":"SHIFT ALT V", "hdg+5":"SHIFT ALT B" ,
-             "crs-1":"CTRL ALT N", "crs+1":"CTRL ALT M", "crs-5":"SHIFT ALT N", "crs+5":"SHIFT ALT M" }
-    keyboard.click( keys[ "%s%+d" % (dial,inc) ]  )
-state.set(dial, delta) # remaining
-    
+# encoder 1 for two axis (one rotation) w/push selector
+RADAR_ELEVATION_AXIS = 3
+RANGE_AXIS = 4
+ 
+encoder = phidgets.get(82141)
 
+if not encoder.getInputState(0):
+    vjoy.setAxis(RADAR_ELEVATION_AXIS, phidgets.getAxis(encoder, "radar-elevation", 3, 0.0))
+else:
+    vjoy.setAxis(RANGE_AXIS, phidgets.getAxis(encoder, "range", 2, 0.0))
+    
 # encoder 2 for axis (one rotation) and button 
-ENCODER_2_AXIS = 1
-ENCODER_2_BUTTON = 1
+MSL_VOLUME_AXIS = 5
+MSL_UNCAGE_BUTTON = 1
 
 encoder = phidgets.get(82081)
-vjoy.setAxis(ENCODER_2_AXIS, phidgets.Axis(encoder).getPosition())
-vjoy.setButton(ENCODER_2_BUTTON, encoder.getInputState(0))
 
+vjoy.setAxis(MSL_VOLUME_AXIS, phidgets.getAxis(encoder, "msl-volume", 1, 1.0))
+vjoy.setButton(MSL_UNCAGE_BUTTON, encoder.getInputState(0))
+
+
+# encoder 1 for hsi hdg/course inc/dec
+# Note: the only way to click hdg/crs up or down is to send multiple subsequent keyboard presses
+#       for each respective gauge modifier (-/+)1, (-/+)5 respectively. By sending only one 
+#       keystroke per sync the call doesn't take too long and it stays responsive while remembering
+#       remaining delta.  
+#tuner = phidgets.get(82141)
+#dial = 'hdg' if not tuner.getInputState(0) else 'crs'
+#delta = phidgets.delta(tuner, 45) + state.get(dial, 0)
+#if delta!=0:
+#    if delta>=5: inc = 5
+#    elif delta>=1: inc = 1
+#    elif delta>-5: inc = -1
+#    else: inc = -5
+#    delta -= inc
+#    keys = { "hdg-1":"CTRL ALT V", "hdg+1":"CTRL ALT B", "hdg-5":"SHIFT ALT V", "hdg+5":"SHIFT ALT B" ,
+#             "crs-1":"CTRL ALT N", "crs+1":"CTRL ALT M", "crs-5":"SHIFT ALT N", "crs+5":"SHIFT ALT M" }
+#    keyboard.click( keys[ "%s%+d" % (dial,inc) ]  )
+#state.set(dial, delta) # remaining
+    
 # saitek axis 2 into 2 buttons (AFBrakesOut/AFBrakesIn)
 AIRBREAK_OUT_BUTTON = 2
 AIRBREAK_IN_BUTTON = 3

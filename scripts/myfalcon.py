@@ -20,6 +20,7 @@ import joysticks, phidgets, state, log, keyboard, falcon
 vjoy = joysticks.get('vJoy Device')
 combatstick = joysticks.get("CH Combatstick USB")
 pedals = joysticks.get('CH Pro Pedals USB')
+throttle = joysticks.get('Saitek Pro Flight Quadrant')
 
 shift = combatstick.getButton(3)
 
@@ -61,7 +62,7 @@ encoder = phidgets.get(82141)
 if not encoder.getInputState(0):
     vjoy.setAxis(RADAR_ELEVATION_AXIS, phidgets.getAxis(encoder, "radar-elevation", 3, 0.0))
 else:
-    vjoy.setAxis(RANGE_AXIS, phidgets.getAxis(encoder, "range", 2, 0.0))
+    vjoy.setAxis(RANGE_AXIS, phidgets.getAxis(encoder, "range", 1, 0.0))
     
 # encoder 2 for axis (one rotation) and button 
 MSL_VOLUME_AXIS = 5
@@ -122,5 +123,20 @@ if state.set("gear", gear) != gear:
 vjoy.setButton(GEAR_UP_BUTTON, handleUp)
 vjoy.setButton(GEAR_DOWN_BUTTON, handleDown)
 
+# Missile/Dogfight override for
+#    g_bHotasDgftSelfCancel 1  // SRM and MRM override callbacks call the override cancel callback when depressed
+ 
+OVERRIDE_UP = 0
+OVERRIDE_DOWN = 1
 
+OVERRIDE_MRM = 6
+OVERRIDE_DOG = 7
 
+override = state.get("override", 0)
+if override>=0 and state.toggle("override-up", throttle.getButton(OVERRIDE_UP)):
+    override -= 1
+if override<=0 and state.toggle("override-down", throttle.getButton(OVERRIDE_DOWN)):
+    override += 1
+state.set("override", override)
+vjoy.setButton(OVERRIDE_MRM, override<0)
+vjoy.setButton(OVERRIDE_DOG, override>0)

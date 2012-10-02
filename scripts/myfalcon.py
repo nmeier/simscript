@@ -2,9 +2,8 @@
 # My setup consists of:
 #
 #  CH Combatstick USB
-#   Map zoom toggle button into FOV axis w/two positions
-#   Map push button into Teamspeak PTT
-#   Map shifted toggle button into Freetrack Reset
+#   Map zoom toggle button #3 into FOV axis w/two positions (long press for Freetrack Reset)
+#   Map push button #3 into Teamspeak PTT
 #  Saitek Thottle Quadrant
 #   Split 2nd Axis into 2 Buttons (Speedbrake Extend/Retract)
 #   Split 3rd Axis into 2 Buttons (Gear Up/Down)
@@ -15,41 +14,45 @@
 #   Map Push Button into Button (Missile Uncage)
 #   Map Rotation into Axis (Missile Acquisition Sound Level)
 #
-import joysticks, phidgets, state, log, keyboard, falcon
+import joysticks, phidgets, state, log, keyboard, falcon, time
 
 vjoy = joysticks.get('vJoy Device')
 combatstick = joysticks.get("CH Combatstick USB")
 pedals = joysticks.get('CH Pro Pedals USB')
 throttle = joysticks.get('Saitek Pro Flight Quadrant')
 
-shift = combatstick.getButton(3)
-
 # combatstick button for zoom axis toggle
+# pedals right for zoom past ZOOM_MAX
+FREETRACK_KEY = "CONTROL SHIFT ALT F"
 ZOOM_MIN = 1.0
 ZOOM_MAX = 0.35
 ZOOM_AXIS = 2
-zoomedout = state.get("zoomedout")
-if state.toggle("zoom-toggle", combatstick.getButton(2) and not shift) or zoomedout == None:
-    log.info("zoom in" if zoomedout else "zoom out")
-    zoomedout = not zoomedout
-    state.set("zoomedout", zoomedout)
+zoomedOut = state.get("zoomedout")
+zoomButton = combatstick.getButton(3)
+if state.toggle("zoom-toggle", zoomButton) or zoomedOut == None:
+    log.info("zoom in" if zoomedOut else "zoom out")
+    zoomedOut = not zoomedOut
+    state.set("zoomedout", zoomedOut)
+    
+zoom = ZOOM_MIN if zoomedOut else ZOOM_MAX - (pedals.getAxis(1,0.25)+1)/2
 
-if zoomedout:
-    zoom = ZOOM_MIN
-else: # pedals right for zoom past ZOOM_MAX
-    zoom = ZOOM_MAX - (pedals.getAxis(1,0.25, 10)+1)/2
-vjoy.setAxis(ZOOM_AXIS, zoom)
+zoomHistory = state.get("zoom-history", [])
+zoomHistory.append(zoom)
+if len(zoomHistory)>10:
+    zoomHistory.pop(0)
+vjoy.setAxis(ZOOM_AXIS, sum(zoomHistory)/len(zoomHistory))
 
-# combatstick shifted button for Freetrack reset
-FREETRACK_KEY = "CONTROL SHIFT ALT F"
-if state.toggle("freetrack-toggle", combatstick.getButton(2) and shift):
+# combatstick zoom axis button long press for Freetrack reset
+if state.toggle("freetrack-reset", zoomButton, 1):
+    log.info("reset freetrack")
     keyboard.click(FREETRACK_KEY)
 
 # combatstick button for Teamspeak PTT
 TEAMSPEAK_KEY = 'CONTROL SHIFT ALT T'
-ptt = combatstick.getButton(4)
+ptt = combatstick.getButton(2)
 optt = state.set("ptt", ptt)
-if ptt != optt and not shift:
+if ptt != optt:
+    log.info("PTT %d" % ptt)
     if ptt: keyboard.press(TEAMSPEAK_KEY)
     else: keyboard.release(TEAMSPEAK_KEY)
 
@@ -125,18 +128,20 @@ vjoy.setButton(GEAR_DOWN_BUTTON, handleDown)
 
 # Missile/Dogfight override for
 #    g_bHotasDgftSelfCancel 1  // SRM and MRM override callbacks call the override cancel callback when depressed
- 
 OVERRIDE_UP = 0
 OVERRIDE_DOWN = 1
 
 OVERRIDE_MRM = 6
 OVERRIDE_DOG = 7
 
+OVERRIDE_HOLD_SECONDS = 0.25
+
 override = state.get("override", 0)
-if override>=0 and state.toggle("override-up", throttle.getButton(OVERRIDE_UP)):
+if override>=0 and state.toggle("override-up", throttle.getButton(OVERRIDE_UP), OVERRIDE_HOLD_SECONDS):
     override -= 1
-if override<=0 and state.toggle("override-down", throttle.getButton(OVERRIDE_DOWN)):
+if override<=0 and state.toggle("override-down", throttle.getButton(OVERRIDE_DOWN), OVERRIDE_HOLD_SECONDS):
     override += 1
-state.set("override", override)
+if override != state.set("override", override):
+    log.info("Override %d" % override)
 vjoy.setButton(OVERRIDE_MRM, override<0)
 vjoy.setButton(OVERRIDE_DOG, override>0)

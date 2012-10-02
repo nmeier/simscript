@@ -1,3 +1,5 @@
+import time
+
 ''' script state  '''
 def get(key,default=None):
     try:
@@ -19,11 +21,28 @@ def set(key,val): #@ReservedAssignment
       F N T N
       T N N F
 '''
-def toggle(key, change):
-    old = set(key, change)
-    if not old and change: return True
-    if old and not change: return False
+def toggle(key, now, hold=None):
+    was = get(key) 
+    if not was and now: 
+        if hold: 
+            if not __holds.get(key, None):
+                __holds[key] = time.clock()
+            if time.clock() - __holds[key] < hold:
+                return False
+        set(key, True)
+        return True
+    
+    if hold and key in __holds:
+        del __holds[key]
+    
+    if was and not now:
+        set(key, False) 
+        return False
+    
     return None
+
+def remove(key):
+    del __dict[key]
 
 def inc(key):
     val = get(key, 0)
@@ -32,8 +51,9 @@ def inc(key):
     return val
 
 def _init():
-    global __dict
+    global __dict, __holds
     __dict = dict()
+    __holds = dict()
 
 def sync():
     pass

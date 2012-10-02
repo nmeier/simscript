@@ -5,10 +5,12 @@ import logging,traceback,os.path
 
 class Joystick:
     
+    MAX_AXIS = 16
+    
     def __init__(self, nameOrIndex):
         
         self._axishistory = []
-        for i in range(16):
+        for i in range(Joystick.MAX_AXIS):
             self._axishistory.append([]) 
        
         if isinstance(nameOrIndex, int):
@@ -41,25 +43,28 @@ class Joystick:
     def getAxis(self, i, deadzone=0.01, smoothing=1):
         if not self._handle:
             return 0
+        
+        assert i<Joystick.MAX_AXIS
+        
         val = _sdl.SDL_JoystickGetAxis(self._handle, i) / 32767
         deadzone = abs(deadzone)
         if val < -1+deadzone:
             val = -1
         if val > 1-deadzone:
             val =  1
-
+            
+        assert not smoothing<1
+        
         history = self._axishistory[i]             
-        history.append(val)
-        if len(history)>smoothing:
+        if len(history)>=smoothing:
             del history[0:len(history)-smoothing]
+
+        if smoothing==1:
+            return val;
+
+        history.append(val)
         
-        if smoothing>1:
-            val = 0
-            for v in history:
-                val += v
-            val = val / len(history)
-        
-        return val 
+        return sum(history)/len(history)
     
     def setAxis(self, a, value):
         raise EnvironmentError("%s is not a virtual voystick" % self.name)

@@ -5,6 +5,7 @@ def get(key,default=None):
     try:
         return __dict[key]
     except KeyError:
+        __dict[key] = default
         return default
 
 def set(key,val): #@ReservedAssignment
@@ -44,9 +45,9 @@ def toggle(key, now, hold=None):
 def remove(key):
     del __dict[key]
 
-def inc(key):
+def inc(key, val):
     val = get(key, 0)
-    val += 1
+    val += val
     set(key,val)
     return val
 

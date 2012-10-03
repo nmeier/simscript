@@ -1,7 +1,7 @@
 ''' Joystick abstraction layer '''
 
 from ctypes import CDLL, Structure, byref, c_void_p, c_char_p, c_long, c_byte
-import logging,traceback,os.path
+import logging,traceback,os.path,platform
 
 HAT_N = 1
 HAT_E = 2
@@ -269,7 +269,7 @@ def _init():
     # wrap virtual joysticks where applicable                
     if not _vjoy: 
         try:
-            _vjoy = CDLL(os.path.join("contrib", "vjoy", "vJoyInterface.dll"))
+            _vjoy = CDLL(os.path.join("contrib", "vjoy", "" if platform.architecture()[0]!='32bit' else "amd64", "vJoyInterface.dll"))
             
             if not _vjoy.vJoyEnabled():
                 _log.info("No Virtual Joystick Driver active")

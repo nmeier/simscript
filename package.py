@@ -15,7 +15,7 @@ except:
     print("Source @ modified revision %s" % svnversion)
     
 # clean up
-shutil.rmtree('build', true)
+shutil.rmtree('build', True)
 
 # calculate extra files
 def make_data_files(roots):

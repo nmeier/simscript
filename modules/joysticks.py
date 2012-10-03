@@ -269,7 +269,11 @@ def _init():
     # wrap virtual joysticks where applicable                
     if not _vjoy: 
         try:
-            _vjoy = CDLL(os.path.join("contrib", "vjoy", "" if platform.architecture()[0]!='32bit' else "amd64", "vJoyInterface.dll"))
+            
+            try:
+                _vjoy = CDLL(os.path.join("contrib", "vjoy", "" if platform.architecture()[0]!='32bit' else "amd64", "vJoyInterface.dll"))
+            except:
+                _vjoy = CDLL(os.path.join("contrib", "vjoy", "vJoyInterface.dll"))
             
             if not _vjoy.vJoyEnabled():
                 _log.info("No Virtual Joystick Driver active")

@@ -1,4 +1,19 @@
-import distutils.core, shutil, os, py2exe, subprocess, re
+import distutils.core, shutil, os, py2exe, subprocess, os, re
+
+
+' grep imports from first line of python files in given folder '
+def grepimports(dir):
+    imports = set()
+    IMPORT_ = 'import '
+    for f in os.listdir(dir):
+        p = os.path.join(dir, f)
+        if not p.endswith("py"): continue
+        for line in file(p):
+            if line.startswith(IMPORT_):
+                for i in line[len(IMPORT_):].split(','):
+                    imports.add(i.strip())
+            break
+    return list(imports)
 
 # check revision
 svnversion = 'XXX'
@@ -38,7 +53,7 @@ def make_data_files(roots):
 
 options = {
   "dist_dir": "build/dist",
-  "includes": ["ctypes", "ctypes.wintypes", "decimal"], 
+  "includes": grepimports('modules'), 
   "excludes" : [],
   "dll_excludes": ["w9xpopen.exe"], 
   "packages": []

@@ -220,6 +220,12 @@ def press(c):
 
 def release(c):
     _send(c, False)
+    
+def isDown(c):
+    return bool(ctypes.windll.user32.GetKeyState(c) & 0x8000)    
+
+def isToggled(c):
+    return bool(ctypes.windll.user32.GetKeyState(c) & 0x0001)    
 
 def sync():
     pass

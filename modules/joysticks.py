@@ -1,7 +1,6 @@
-''' Joystick abstraction layer '''
+import logging,traceback,os,platform,ctypes
 
-from ctypes import CDLL, Structure, byref, c_void_p, c_char_p, c_long, c_byte
-import logging,traceback,os.path,platform
+''' Joystick abstraction layer '''
 
 HAT_N = 1
 HAT_E = 2
@@ -35,7 +34,7 @@ class Joystick:
         except:
             raise EnvironmentError("joysticks.get('%s') is not available" % nameOrIndex)
 
-        self._handle = c_void_p()
+        self._handle = ctypes.c_void_p()
         self.name = _sdl.SDL_JoystickName(self.index).decode()
         
     def _acquire(self):
@@ -112,32 +111,32 @@ class VirtualJoystick:
         (0x38, "wWheel")
         ]
 
-    class Position(Structure):
+    class Position(ctypes.Structure):
         _fields_ = [
-          ("index", c_byte),
-          ("wThrottle", c_long),
-          ("wRudder", c_long),
-          ("wAileron", c_long),
-          ("wAxisX", c_long),
-          ("wAxisY", c_long),
-          ("wAxisZ", c_long),
-          ("wAxisXRot", c_long), 
-          ("wAxisYRot", c_long),
-          ("wAxisZRot", c_long),
-          ("wSlider", c_long),
-          ("wDial", c_long),
-          ("wWheel", c_long),
-          ("wAxisVX", c_long),
-          ("wAxisVY", c_long),
-          ("wAxisVZ", c_long),
-          ("wAxisVBRX", c_long), 
-          ("wAxisVBRY", c_long),
-          ("wAxisVBRZ", c_long),
-          ("lButtons", c_long),  # 32 buttons: 0x00000001 to 0x80000000 
-          ("bHats", c_long),     # Lower 4 bits: HAT switch or 16-bit of continuous HAT switch
-          ("bHatsEx1", c_long),  # Lower 4 bits: HAT switch or 16-bit of continuous HAT switch
-          ("bHatsEx2", c_long),  # Lower 4 bits: HAT switch or 16-bit of continuous HAT switch
-          ("bHatsEx3", c_long)   # Lower 4 bits: HAT switch or 16-bit of continuous HAT switch
+          ("index", ctypes.c_byte),
+          ("wThrottle", ctypes.c_long),
+          ("wRudder", ctypes.c_long),
+          ("wAileron", ctypes.c_long),
+          ("wAxisX", ctypes.c_long),
+          ("wAxisY", ctypes.c_long),
+          ("wAxisZ", ctypes.c_long),
+          ("wAxisXRot", ctypes.c_long), 
+          ("wAxisYRot", ctypes.c_long),
+          ("wAxisZRot", ctypes.c_long),
+          ("wSlider", ctypes.c_long),
+          ("wDial", ctypes.c_long),
+          ("wWheel", ctypes.c_long),
+          ("wAxisVX", ctypes.c_long),
+          ("wAxisVY", ctypes.c_long),
+          ("wAxisVZ", ctypes.c_long),
+          ("wAxisVBRX", ctypes.c_long), 
+          ("wAxisVBRY", ctypes.c_long),
+          ("wAxisVBRZ", ctypes.c_long),
+          ("lButtons", ctypes.c_long),  # 32 buttons: 0x00000001 to 0x80000000 
+          ("bHats", ctypes.c_long),     # Lower 4 bits: HAT switch or 16-bit of continuous HAT switch
+          ("bHatsEx1", ctypes.c_long),  # Lower 4 bits: HAT switch or 16-bit of continuous HAT switch
+          ("bHatsEx2", ctypes.c_long),  # Lower 4 bits: HAT switch or 16-bit of continuous HAT switch
+          ("bHatsEx3", ctypes.c_long)   # Lower 4 bits: HAT switch or 16-bit of continuous HAT switch
           ]
     
 
@@ -156,10 +155,10 @@ class VirtualJoystick:
         self._axis = []
         for akey, pkey in VirtualJoystick._AXIS_KEYS:
             if _vjoy.GetVJDAxisExist(self._position.index, akey):
-                amax = c_long()
-                amin = c_long()
-                _vjoy.GetVJDAxisMin(self._position.index, akey, byref(amin))
-                _vjoy.GetVJDAxisMax(self._position.index, akey, byref(amax))
+                amax = ctypes.c_long()
+                amin = ctypes.c_long()
+                _vjoy.GetVJDAxisMin(self._position.index, akey, ctypes.byref(amin))
+                _vjoy.GetVJDAxisMax(self._position.index, akey, ctypes.byref(amax))
                 self._axis.append((pkey, amin.value,amax.value))
                 self._position.__setattr__(pkey, int(amin.value + (amax.value-amin.value)/2)) 
                 
@@ -210,7 +209,7 @@ class VirtualJoystick:
             return
         if not self._acquired:
             return
-        if not _vjoy.UpdateVJD(self._position.index, byref(self._position)):
+        if not _vjoy.UpdateVJD(self._position.index, ctypes.byref(self._position)):
             _log.warning("joysticks.get('%s') couldn't be set" % self.name)
             self._acquired = False
         self._dirty = False
@@ -256,9 +255,9 @@ def _init():
     # preload all available joysticks for reporting
     if not _sdl: 
         try:
-            _sdl = CDLL(os.path.join("contrib","sdl","SDL.dll"))
+            _sdl = ctypes.CDLL(os.path.join("contrib","sdl","SDL.dll"))
             _sdl.SDL_Init(0x200)
-            _sdl.SDL_JoystickName.restype = c_char_p
+            _sdl.SDL_JoystickName.restype = ctypes.c_char_p
             for index in range(0, _sdl.SDL_NumJoysticks()) :
                 joy = Joystick(index)
                 _joysticks.append(joy)
@@ -271,9 +270,9 @@ def _init():
         try:
             
             try:
-                _vjoy = CDLL(os.path.join("contrib", "vjoy", "" if platform.architecture()[0]!='32bit' else "amd64", "vJoyInterface.dll"))
+                _vjoy = ctypes.CDLL(os.path.join("contrib", "vjoy", "" if platform.architecture()[0]!='32bit' else "amd64", "vJoyInterface.dll"))
             except:
-                _vjoy = CDLL(os.path.join("contrib", "vjoy", "vJoyInterface.dll"))
+                _vjoy = ctypes.CDLL(os.path.join("contrib", "vjoy", "vJoyInterface.dll"))
             
             if not _vjoy.vJoyEnabled():
                 _log.info("No Virtual Joystick Driver active")

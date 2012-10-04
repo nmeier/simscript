@@ -35,12 +35,12 @@ if state.set("handle", handle) != handle:
 #  | KEY_COM_RADIO_SWAP      | COM_STBY_RADIO_SWAP | Swaps COM 1 freq/standby  | All aircraft | 
 #
 encoder1 = phidgets.get(82141)
-delta = phidgets.encoder2delta(encoder1)
+delta = phidgets.getDelta(encoder1)
 for i in range(0,abs(delta)):
     fsx.send("COM_RADIO_WHOLE_INC" if delta>0 else "COM_RADIO_WHOLE_DEC")
 
 encoder2 = phidgets.get(82081)
-delta = phidgets.encoder2delta(encoder2)
+delta = phidgets.getDelta(encoder2)
 for i in range(0,abs(delta)):
     fsx.send("COM_RADIO_FRACT_INC" if delta>0 else "COM_RADIO_FRACT_DEC")
 

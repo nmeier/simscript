@@ -1,5 +1,6 @@
-''' Phidget abstraction layer '''
 import logging, traceback, time
+
+''' Phidget abstraction layer '''
 
 from Phidgets.Manager import Manager
 from Phidgets import Devices

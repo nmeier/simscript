@@ -1,3 +1,5 @@
+import logging,time,ctypes.wintypes,sys,traceback,decimal,tempfile
+
 '''
 
  A FSX Sim Connect abstraction layer that allows simscripts to read and write simulator variables
@@ -5,7 +7,6 @@
  An understanding of http://msdn.microsoft.com/en-us/library/cc526981.aspx is required.
 
 '''
-import logging,time,ctypes.wintypes,sys,traceback,decimal,tempfile
 
 _SIMCONNECT_OBJECT_ID_USER = 0
 

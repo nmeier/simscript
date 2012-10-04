@@ -45,9 +45,9 @@ def toggle(key, now, hold=None):
 def remove(key):
     del __dict[key]
 
-def inc(key, val):
+def inc(key, increment=1):
     val = get(key, 0)
-    val += val
+    val += increment
     set(key,val)
     return val
 

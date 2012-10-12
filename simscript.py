@@ -145,8 +145,10 @@ def main(argv):
 
     log.info("Python %s" % sys.version)
 
-    sys.stderr = LoggerAsStream(logging.getLogger("STDOUT"), logging.INFO)
-    sys.stdout = LoggerAsStream(logging.getLogger("STDERR"), logging.INFO)
+    if sys.stderr:
+        sys.stderr = LoggerAsStream(logging.getLogger("STDOUT"), logging.INFO)
+    if sys.stdout:
+        sys.stdout = LoggerAsStream(logging.getLogger("STDERR"), logging.INFO)
        
     # windows support?
     try:

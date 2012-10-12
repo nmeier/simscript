@@ -28,7 +28,8 @@ MSL_UNCAGE_BUTTON = 1
 AIRBREAK_AXIS = 1 # in
 AIRBREAK_OUT_BUTTON = 2
 AIRBREAK_IN_BUTTON = 3
-ZOOM_AXIS = 2 # in
+ZOOM_BUTTON = 2 # in
+ZOOM_AXIS = 2
 GEAR_UP_BUTTON = 4
 GEAR_DOWN_BUTTON = 5
 OVERRIDE_UP_BUTTON = 0 # in
@@ -44,19 +45,22 @@ combatstick = joysticks.get("CH Combatstick USB")
 pedals = joysticks.get('CH Pro Pedals USB')
 throttle = joysticks.get('Saitek Pro Flight Quadrant')
 
-# combatstick button for zoom axis toggle and right pedal for zoom
+# combatstick button for zoom axis toggle and right pedal for custom zoom
 FREETRACK_KEY = "CONTROL SHIFT ALT F"
-ZOOM_MIN = 1.0
-ZOOM_MAX = 0.35
-zoomedOut = state.get("zoomedout")
-zoomButton = combatstick.getButton(2)
-if state.toggle("zoom-toggle", zoomButton) or zoomedOut == None:
-    log.info("zoom in" if zoomedOut else "zoom out")
-    zoomedOut = not zoomedOut
-    state.set("zoomedout", zoomedOut)
-    
-zoom = ZOOM_MIN if zoomedOut else ZOOM_MAX - (pedals.getAxis(1,0.25)+1)/2
+ZOOMED_OUT = 1.0
+ZOOM_IN = 0.35
 
+zoomButton = combatstick.getButton(ZOOM_BUTTON)
+zoom = state.get("zoom")
+if state.toggle("zoom-toggle", zoomButton) or zoom == None:
+    log.info("zoom in" if zoom==ZOOMED_OUT else "zoom out")
+    zoom = ZOOM_IN if zoom==ZOOMED_OUT else ZOOMED_OUT
+    state.set("zoom", zoom)
+    
+flightData = falcon.getFlightData()
+if not flightData.gearPos or flightData.kias<5: # gear up or zero speed kias
+    zoom = zoom - (pedals.getAxis(1,0.25)+1)/2    
+    
 zoomHistory = state.get("zoom-history", [])
 zoomHistory.append(zoom)
 if len(zoomHistory)>10:
@@ -80,7 +84,7 @@ if pttButton != state.set("pttButton", pttButton):
 encoder = phidgets.get(82141)
 
 if not encoder.getInputState(0):
-    vjoy.setAxis(RADAR_ELEVATION_AXIS, phidgets.getAxis(encoder, "radar-elevation", 3, 0.0))
+    vjoy.setAxis(RADAR_ELEVATION_AXIS, -phidgets.getAxis(encoder, "radar-elevation", 3, 0.0))
 else:
     vjoy.setAxis(RANGE_AXIS, phidgets.getAxis(encoder, "range", 1, 0.0))
     

@@ -97,40 +97,59 @@ class FLIGHTDATA(ctypes.Structure):
     )
     
 _log = logging.getLogger(__name__)
-_falconSharedMemory = None
 _pFlightData = None
+_pFlightData2 = None
+_pOSBData = None
 
 def sync(): 
     pass
 
-def _connect():
+def getFlightData():
     
-    global _falconSharedMemory, _pFlightData
+    global _pFlightData
     
-    if _pFlightData != None:
-        return True
+    if _pFlightData == None:
+        
+        handle = ctypes.windll.kernel32.OpenFileMappingA(FILE_MAP_READ|FILE_MAP_WRITE, False, "FalconSharedMemoryArea".encode())
+        if handle:
+            ctypes.windll.kernel32.MapViewOfFile.restype = ctypes.POINTER(FLIGHTDATA)
+            _pFlightData = ctypes.windll.kernel32.MapViewOfFile(handle, FILE_MAP_READ|FILE_MAP_WRITE, 0, 0, 0)
+
+    if not _pFlightData:
+        raise EnvironmentError("can't access falcon shared memory area")
     
-    _falconSharedMemory = ctypes.windll.kernel32.OpenFileMappingA(FILE_MAP_READ|FILE_MAP_WRITE, False, "FalconSharedMemoryArea".encode())
-    if not _falconSharedMemory:
-        _log.info("No Falcon shared memory found")
-        return False
+    return _pFlightData.contents
 
-    ctypes.windll.kernel32.MapViewOfFile.restype = ctypes.POINTER(FLIGHTDATA)
-    _pFlightData = ctypes.windll.kernel32.MapViewOfFile(_falconSharedMemory, FILE_MAP_READ|FILE_MAP_WRITE, 0, 0, 0)
-
-    return True
-
-def _disconnect():
-    global _falconSharedMemory, _pFlightData
-    if _falconSharedMemory:
-        ctypes.windll.kernel32.UnmapViewOfFile(_pFlightData)
-        _pFlightData = None
-        ctypes.windll.kernel32.CloseHandle(falconSharedMemory)
-        _falconSharedMemory = None
+def getOSBData():
+    global _pOSBData
     
+    if _pOSBData == None:
+        
+        handle = ctypes.windll.kernel32.OpenFileMappingA(FILE_MAP_READ|FILE_MAP_WRITE, False, "FalconSharedOsbMemoryArea".encode())
+        if handle:
+            ctypes.windll.kernel32.MapViewOfFile.restype = ctypes.POINTER(OSBDATA)
+            _pOSBData = ctypes.windll.kernel32.MapViewOfFile(handle, FILE_MAP_READ|FILE_MAP_WRITE, 0, 0, 0)
 
-def flightData():
-    return _pFlightData.contents if _connect() else None    
+    if not _pOSBData:
+        raise EnvironmentError("can't access falcon shared memory area")
+    
+    return _pOSBData.contents
+
+def getFlightData2():    
+
+    global _pFlightData2
+    
+    if _pFlightData2 == None:
+        
+        handle = ctypes.windll.kernel32.OpenFileMappingA(FILE_MAP_READ|FILE_MAP_WRITE, False, "FalconSharedMemoryArea2".encode())
+        if handle:
+            ctypes.windll.kernel32.MapViewOfFile.restype = ctypes.POINTER(FLIGHTDATA2)
+            _pFlightData2 = ctypes.windll.kernel32.MapViewOfFile(handle, FILE_MAP_READ|FILE_MAP_WRITE, 0, 0, 0)
+
+    if not _pFlightData2:
+        raise EnvironmentError("can't access falcon shared memory area")
+    
+    return _pFlightData.contents
 
 def init():
     pass

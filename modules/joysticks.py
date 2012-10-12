@@ -180,7 +180,7 @@ class VirtualJoystick:
     
     def setAxis(self, a, value):
         if a<0 or a>=len(self._axis):
-            raise EnvironmentError("joysticks.get('%s') doesn't have axis %d" % a)
+            raise EnvironmentError("joysticks.get('%s') doesn't have axis %d" % (self.index, a))
         if value < -1 or value > 1:
             raise EnvironmentError("joysticks.get('%s') value for axis %d not -1.0 < %d < 1.0" % (self.index, a, value))
         pkey, amin, amax = self._axis[a]

@@ -58,7 +58,7 @@ if state.toggle("zoom-toggle", zoomButton) or zoom == None:
     state.set("zoom", zoom)
     
 flightData = falcon.getFlightData()
-if not flightData.gearPos or flightData.kias<5: # gear up or zero speed kias
+if not flightData.gearPos or flightData.vt==0: # gear up or zero speed
     zoom = zoom - (pedals.getAxis(1,0.25)+1)/2    
     
 zoomHistory = state.get("zoom-history", [])

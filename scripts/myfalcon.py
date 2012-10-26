@@ -17,26 +17,33 @@
 import joysticks, phidgets, state, log, keyboard, falcon, time
 
 # Throttle Quadrant
-CURSOR_WE_AXIS = 0
-CURSOR_NS_AXIS = 1
-GEAR_AXIS = 2
-RADAR_ELEVATION_AXIS = 3
-RANGE_AXIS = 4
-MSL_VOLUME_AXIS = 5
+CURSOR_WE_AXIS_OUT = 0
+CURSOR_NS_AXIS_OUT = 1
+GEAR_AXIS_IN = 2
+RADAR_ELEVATION_AXIS_OUT = 3
+RANGE_AXIS_OUT = 4
+MSL_VOLUME_AXIS_OUT = 5
 
-MSL_UNCAGE_BUTTON = 1
-AIRBREAK_AXIS = 1 # in
-AIRBREAK_OUT_BUTTON = 2
-AIRBREAK_IN_BUTTON = 3
-ZOOM_BUTTON = 2 # in
-ZOOM_AXIS = 2
-GEAR_UP_BUTTON = 4
-GEAR_DOWN_BUTTON = 5
-OVERRIDE_UP_BUTTON = 0 # in
-OVERRIDE_DOWN_BUTTON = 1 # in
-OVERRIDE_MRM_BUTTON = 6
-OVERRIDE_DOG_BUTTON = 7
-OVERRIDE_HOLD_SECONDS = 0.25
+CMS_BUTTON_IN = 1
+CMS_FORWARD_BUTTON_OUT = 8
+CMS_RIGHT_BUTTON_OUT = 9
+CMS_DOWN_BUTTON_OUT = 10
+CMS_DOWNRIGHT_HOLD_SECONDS = 0.25
+
+MSL_UNCAGE_BUTTON_OUT = 1
+
+AIRBREAK_AXIS_IN = 1 # in
+AIRBREAK_EXTEND_BUTTON_OUT = 2
+AIRBREAK_RETRACT_BUTTON_OUT = 3
+ZOOM_BUTTON_IN = 2 # in
+ZOOM_AXIS_OUT = 2
+GEAR_UP_BUTTON_OUT = 4
+GEAR_DOWN_BUTTON_OUT = 5
+OVERRIDE_UP_BUTTON_IN = 0 # in
+OVERRIDE_DOWN_BUTTON_IN = 1 # in
+OVERRIDE_MRM_BUTTON_OUT = 6
+OVERRIDE_DOG_BUTTON_OUT = 7
+OVERRIDE_HOLD_SECONDS = 0.1
 
 
 # sticks
@@ -45,27 +52,45 @@ combatstick = joysticks.get("CH Combatstick USB")
 pedals = joysticks.get('CH Pro Pedals USB')
 throttle = joysticks.get('Saitek Pro Flight Quadrant')
 
+# combatstick button long press for CMS down/right toggle and CMS forward
+cms = combatstick.getButton(CMS_BUTTON_IN)
+if state.toggle("cms-downright", cms, CMS_DOWNRIGHT_HOLD_SECONDS):
+    cmsdown = state.get("cms-down", False)
+    vjoy.setButton(CMS_DOWN_BUTTON_OUT, not cmsdown)
+    vjoy.setButton(CMS_RIGHT_BUTTON_OUT, cmsdown)
+    state.set("cms-down", not cmsdown)
+    vjoy.setButton(CMS_FORWARD_BUTTON_OUT, False)
+    state.set("cms-up", True)   # fake toggle cms forward
+else:
+    vjoy.setButton(CMS_RIGHT_BUTTON_OUT, False)
+    vjoy.setButton(CMS_DOWN_BUTTON_OUT, False)
+    if not state.get("cms-downright"):
+        vjoy.setButton(CMS_FORWARD_BUTTON_OUT, state.toggle("cms-up", not cms))   
+
 # combatstick button for zoom axis toggle and right pedal for custom zoom
 FREETRACK_KEY = "CONTROL SHIFT ALT F"
 ZOOMED_OUT = 1.0
 ZOOM_IN = 0.35
 
-zoomButton = combatstick.getButton(ZOOM_BUTTON)
+zoomButton = combatstick.getButton(ZOOM_BUTTON_IN)
 zoom = state.get("zoom")
 if state.toggle("zoom-toggle", zoomButton) or zoom == None:
     log.info("zoom in" if zoom==ZOOMED_OUT else "zoom out")
     zoom = ZOOM_IN if zoom==ZOOMED_OUT else ZOOMED_OUT
     state.set("zoom", zoom)
-    
-flightData = falcon.getFlightData()
-if not flightData.gearPos or flightData.vt==0: # gear up or zero speed
-    zoom = zoom - (pedals.getAxis(1,0.25)+1)/2    
+
+try:
+    flightData = falcon.getFlightData()
+    if not flightData.gearPos or flightData.vt==0: # gear up or zero speed
+        zoom = zoom - (pedals.getAxis(1,0.25)+1)/2    
+except:
+    pass
     
 zoomHistory = state.get("zoom-history", [])
 zoomHistory.append(zoom)
 if len(zoomHistory)>10:
     zoomHistory.pop(0)
-vjoy.setAxis(ZOOM_AXIS, sum(zoomHistory)/len(zoomHistory))
+vjoy.setAxis(ZOOM_AXIS_OUT, sum(zoomHistory)/len(zoomHistory))
 
 # combatstick zoom axis button long press for Freetrack reset
 if state.toggle("freetrack-reset", zoomButton, 1):
@@ -84,15 +109,15 @@ if pttButton != state.set("pttButton", pttButton):
 encoder = phidgets.get(82141)
 
 if not encoder.getInputState(0):
-    vjoy.setAxis(RADAR_ELEVATION_AXIS, -phidgets.getAxis(encoder, "radar-elevation", 3, 0.0))
+    vjoy.setAxis(RADAR_ELEVATION_AXIS_OUT, -phidgets.getAxis(encoder, "radar-elevation", 3, 0.0))
 else:
-    vjoy.setAxis(RANGE_AXIS, phidgets.getAxis(encoder, "range", 1, 0.0))
+    vjoy.setAxis(RANGE_AXIS_OUT, phidgets.getAxis(encoder, "range", 1, 0.0))
     
 # encoder 2 for axis (one rotation) and button 
 encoder = phidgets.get(82081)
 
-vjoy.setAxis(MSL_VOLUME_AXIS, phidgets.getAxis(encoder, "msl-volume", 1, 1.0))
-vjoy.setButton(MSL_UNCAGE_BUTTON, encoder.getInputState(0))
+vjoy.setAxis(MSL_VOLUME_AXIS_OUT, phidgets.getAxis(encoder, "msl-volume", 1, 1.0))
+vjoy.setButton(MSL_UNCAGE_BUTTON_OUT, encoder.getInputState(0))
 
 
 # encoder 1 for hsi hdg/course inc/dec
@@ -116,39 +141,39 @@ vjoy.setButton(MSL_UNCAGE_BUTTON, encoder.getInputState(0))
     
 # saitek axis 2 into 2 buttons (AFBrakesOut/AFBrakesIn)
 saitek = joysticks.get('Saitek Pro Flight Quadrant')
-speedbrake = saitek.getAxis(AIRBREAK_AXIS)
+speedbrake = saitek.getAxis(AIRBREAK_AXIS_IN)
 retract = speedbrake < -0.5
 extend = speedbrake > 0.5
-if state.set("sbe", extend) != extend and extend:
+if state.toggle("sbe", extend):
     log.info("extending speed brakes")
-if state.set("sbr", retract) != retract and retract:
+if state.toggle("sbr", retract):
     log.info("retracting speed brakes")
-vjoy.setButton(AIRBREAK_OUT_BUTTON, extend)
-vjoy.setButton(AIRBREAK_IN_BUTTON, retract)
+vjoy.setButton(AIRBREAK_EXTEND_BUTTON_OUT, extend)
+vjoy.setButton(AIRBREAK_RETRACT_BUTTON_OUT, retract)
 
 
 # saitek axis 3 into 2 buttons (AFGearUp, AFGearDown)
-handleDown = saitek.getAxis(GEAR_AXIS) > 0.25
-if handleDown: # let's not accidentially retract gear unless we've seen handle down first
-    state.set("gear-seen-down", True)
-handleUp = saitek.getAxis(2) < -0.25 and state.get("gear-seen-down")
-gear = (handleUp,handleDown)
-if state.set("gear", gear) != gear:
-    log.info("Gear handle up=%s, down=%s" % (handleUp, handleDown))
-vjoy.setButton(GEAR_UP_BUTTON, handleUp)
-vjoy.setButton(GEAR_DOWN_BUTTON, handleDown)
+handle = saitek.getAxis(GEAR_AXIS_IN)
+handleDown = handle > 0.25
+handleUp = handle < -0.25
+if state.toggle("gear-down", handleDown):
+    log.info("gear handle down")
+if state.toggle("gear-up", handleUp):
+    log.info("gear handle up")
+vjoy.setButton(GEAR_DOWN_BUTTON_OUT, handleDown)
+vjoy.setButton(GEAR_UP_BUTTON_OUT, handleUp)
 
 # Missile/Dogfight override for
 #    g_bHotasDgftSelfCancel 1  // SRM and MRM override callbacks call the override cancel callback when depressed
 override = state.get("override", 0)
-if override>=0 and state.toggle("override-up", throttle.getButton(OVERRIDE_UP_BUTTON), OVERRIDE_HOLD_SECONDS):
+if override>=0 and state.toggle("override-up", throttle.getButton(OVERRIDE_UP_BUTTON_IN), OVERRIDE_HOLD_SECONDS):
     override -= 1
-if override<=0 and state.toggle("override-down", throttle.getButton(OVERRIDE_DOWN_BUTTON), OVERRIDE_HOLD_SECONDS):
+if override<=0 and state.toggle("override-down", throttle.getButton(OVERRIDE_DOWN_BUTTON_IN), OVERRIDE_HOLD_SECONDS):
     override += 1
 if override != state.set("override", override):
     log.info("Override %d" % override)
-vjoy.setButton(OVERRIDE_MRM_BUTTON, override<0)
-vjoy.setButton(OVERRIDE_DOG_BUTTON, override>0)
+vjoy.setButton(OVERRIDE_MRM_BUTTON_OUT, override<0)
+vjoy.setButton(OVERRIDE_DOG_BUTTON_OUT, override>0)
 
 # hat for radar cursor (supporting diagonals)
 hat = combatstick.getHat(0)
@@ -158,6 +183,6 @@ if not hat:
 else:
     delta = min(1, state.get("radar-delta", 0) + 0.05)
 state.set("radar-delta", delta)
-vjoy.setAxis(CURSOR_WE_AXIS,  bool(hat&joysticks.HAT_W)*-delta + bool(hat&joysticks.HAT_E)*delta )
-vjoy.setAxis(CURSOR_NS_AXIS,  bool(hat&joysticks.HAT_N)*delta + bool(hat&joysticks.HAT_S)*-delta )
+vjoy.setAxis(CURSOR_WE_AXIS_OUT,  bool(hat&joysticks.HAT_W)*-delta + bool(hat&joysticks.HAT_E)*delta )
+vjoy.setAxis(CURSOR_NS_AXIS_OUT,  bool(hat&joysticks.HAT_N)*delta + bool(hat&joysticks.HAT_S)*-delta )
 

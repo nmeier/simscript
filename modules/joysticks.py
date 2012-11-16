@@ -35,7 +35,8 @@ class Joystick:
             raise EnvironmentError("joysticks.get('%s') is not available" % nameOrIndex)
 
         self._handle = ctypes.c_void_p()
-        self.name = _sdl.SDL_JoystickName(self.index).decode()
+        # see http://nedbatchelder.com/text/unipain.html on Python 2/3 differences on unicode handling re decode()
+        self.name = _sdl.SDL_JoystickName(self.index).decode().strip()
         
     def _acquire(self):
         if self._handle:
@@ -192,12 +193,12 @@ class VirtualJoystick:
     
     def getButton(self, i):
         if i<0 or i>=self._buttons:
-            raise EnvironmentError("joysticks.get('%s') doesn't have button  %d" % i)
+            raise EnvironmentError("joysticks.get('%s') doesn't have button  %d" % (self.name, i))
         return self._position.lButtons & (1<<i)
     
     def setButton(self, i, value):
         if i<0 or i>=self._buttons:
-            raise EnvironmentError("joysticks.get('%s') doesn't have button  %d" % i)
+            raise EnvironmentError("joysticks.get('%s') doesn't have button  %d" % (self.name, i))
         if value:
             self._position.lButtons |= 1<<i
         else:
@@ -224,7 +225,7 @@ def numJoysticks():
 
 def get(nameOrIndex):
     try:
-        joy = _name2joystick[nameOrIndex]
+        joy = _name2joystick[nameOrIndex if isinstance(nameOrIndex,int) else nameOrIndex.lower()]
     except:
         raise EnvironmentError("No joystick %s" % nameOrIndex)
     joy._acquire()
@@ -250,12 +251,11 @@ def _init():
     _log = logging.getLogger(__name__)
     _joysticks = []
     _name2joystick = dict()
-
-    
+   
     # preload all available joysticks for reporting
     if not _sdl: 
         try:
-            _sdl = ctypes.CDLL(os.path.join("contrib","sdl","SDL.dll"))
+            _sdl = ctypes.CDLL(os.path.join("contrib","sdl",platform.architecture()[0],"SDL.dll"))
             _sdl.SDL_Init(0x200)
             _sdl.SDL_JoystickName.restype = ctypes.c_char_p
             for index in range(0, _sdl.SDL_NumJoysticks()) :
@@ -268,12 +268,7 @@ def _init():
     # wrap virtual joysticks where applicable                
     if not _vjoy: 
         try:
-            
-            try:
-                _vjoy = ctypes.CDLL(os.path.join("contrib", "vjoy", "" if platform.architecture()[0]!='32bit' else "amd64", "vJoyInterface.dll"))
-            except:
-                _vjoy = ctypes.CDLL(os.path.join("contrib", "vjoy", "vJoyInterface.dll"))
-            
+            _vjoy = ctypes.CDLL(os.path.join("contrib", "vjoy", platform.architecture()[0], "vJoyInterface.dll"))
             if not _vjoy.vJoyEnabled():
                 _log.info("No Virtual Joystick Driver active")
             else:
@@ -294,7 +289,7 @@ def _init():
     
     # build dictionary
     for joy in _joysticks:
-        _name2joystick[joy.name] = joy 
+        _name2joystick[joy.name.lower()] = joy 
         _name2joystick[joy.index] = joy 
         _log.info(joy)
     

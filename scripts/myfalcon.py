@@ -79,10 +79,12 @@ if state.toggle("zoom-toggle", zoomButton) or zoom == None:
     zoom = ZOOM_IN if zoom==ZOOMED_OUT else ZOOMED_OUT
     state.set("zoom", zoom)
 
+
+zoom = zoom - (pedals.getAxis(1,0.25)+1)/2    
 try:
     flightData = falcon.getFlightData()
-    if not flightData.gearPos or flightData.vt==0: # gear up or zero speed
-        zoom = zoom - (pedals.getAxis(1,0.25)+1)/2    
+    if flightData.gearPos and flightData.vt>0: # might be taxiing w/brakes
+        zoom = state.get("zoom")
 except:
     pass
     

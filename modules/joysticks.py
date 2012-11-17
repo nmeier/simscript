@@ -56,7 +56,8 @@ class Joystick:
         
         assert i<Joystick.MAX_AXIS
         
-        val = _sdl.SDL_JoystickGetAxis(self._handle, i) / 32767
+        val = _sdl.SDL_JoystickGetAxis(self._handle, i) / float(32767)
+        
         deadzone = abs(deadzone)
         if val < -1+deadzone:
             val = -1
@@ -258,6 +259,7 @@ def _init():
             _sdl = ctypes.CDLL(os.path.join("contrib","sdl",platform.architecture()[0],"SDL.dll"))
             _sdl.SDL_Init(0x200)
             _sdl.SDL_JoystickName.restype = ctypes.c_char_p
+            _sdl.SDL_JoystickGetAxis.restype = ctypes.c_int16
             for index in range(0, _sdl.SDL_NumJoysticks()) :
                 joy = Joystick(index)
                 _joysticks.append(joy)

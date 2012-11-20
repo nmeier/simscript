@@ -115,7 +115,7 @@ def getFlightData():
             ctypes.windll.kernel32.MapViewOfFile.restype = ctypes.POINTER(FLIGHTDATA)
             _pFlightData = ctypes.windll.kernel32.MapViewOfFile(handle, FILE_MAP_READ|FILE_MAP_WRITE, 0, 0, 0)
 
-    if not _pFlightData:
+    if _pFlightData == None:
         raise EnvironmentError("can't access falcon shared memory area")
     
     return _pFlightData.contents

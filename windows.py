@@ -74,13 +74,12 @@ class TrayIcon:
         win32gui.PostQuitMessage(0) 
         self._hwnd = None
        
-    def pump(self, block=True):
-        if block:
-            if not self._hwnd: raise Exception("TrayIcon unavailable")
-            win32gui.PumpMessages()
-        else:
-            win32gui.PumpWaitingMessages()    
-            
+def pumpEvents(self, block=True):
+    if block:
+        win32gui.PumpMessages()
+    else:
+        win32gui.PumpWaitingMessages()    
+        
 def singleton():
     win32event.CreateMutex(None, False, "5ea86490-d4ec-11e1-9b23-0800200c9a66")
     return win32api.GetLastError() != winerror.ERROR_ALREADY_EXISTS

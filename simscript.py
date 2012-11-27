@@ -225,7 +225,7 @@ def main(argv):
         sync = (time.clock()+(1.0/hertz))
         
         # pump ui events
-        if tray: tray.pump(False)
+        if windows: windows.pumpEvents(False)
         
         # sync modules
         for mod in modules: mod.sync()

@@ -9,10 +9,11 @@ def get(key,default=None):
         return default
 
 def set(key,val): #@ReservedAssignment
+    """ store value for given key and return last known value (None, if not known, False, if not known and val is True or False) """
     try:
         old =  __dict[key]
     except KeyError:
-        old = val
+        old = False if val==True or val==False else None
     __dict[key] = val
     return old
 

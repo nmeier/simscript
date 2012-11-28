@@ -5,7 +5,6 @@ def get(key,default=None):
     try:
         return __dict[key]
     except KeyError:
-        __dict[key] = default
         return default
 
 def set(key,val): #@ReservedAssignment
@@ -16,6 +15,26 @@ def set(key,val): #@ReservedAssignment
         old = False if val==True or val==False else None
     __dict[key] = val
     return old
+
+def lock(key, refresh, ttl):
+    
+    if refresh:
+        was = key in __dict
+        __dict[key] = time.clock()+ttl
+        return True if not was else None
+
+    try:
+        expired = __dict[key] < time.clock()
+        
+        if not expired: return None
+        
+        del __dict[key]
+        
+        return False
+    
+    except KeyError:
+        return None
+
 
 '''
         N T F

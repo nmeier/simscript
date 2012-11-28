@@ -98,6 +98,9 @@ def pumpMessages(blocking=True):
     else:
         win32gui.PumpWaitingMessages()
 
+def loadLibrary(name):
+    return win32api.LoadLibrary(name)
+
 if __name__ == "__main__":    
     
     option = set([True])

@@ -1,10 +1,12 @@
-import logging, ctypes, threading, windows, win32gui
+import logging, ctypes, threading, windows, win32api
 
-from ctypes import c_int, c_short, c_long, WINFUNCTYPE, Structure
+from ctypes import c_int, c_short, c_long, WINFUNCTYPE, Structure, cdll
 from threading import Lock, Thread
 
 WH_MOUSE_LL = 14
+WM_MOUSEWHEEL = 0x020A
 WM_MOUSEHWHEEL = 0x020e
+
 
 class POINT(Structure):
     _fields_ = [ ("x", ctypes.wintypes.LONG), ("y", ctypes.wintypes.LONG)] 
@@ -20,7 +22,20 @@ class MSLLHOOKSTRUCT(Structure):
 PMSLLHOOKSTRUCT = ctypes.POINTER(MSLLHOOKSTRUCT)
 
 LOWLEVELMOUSEPROC = WINFUNCTYPE(c_int, c_int, ctypes.wintypes.WPARAM, ctypes.wintypes.LPARAM)
- 
+
+class _Atomic:
+    def __init__(self, value=None):
+        self._lock = threading.Lock()
+        self._value = value
+    def add(self, value):
+        with self._lock:
+            self._value += value
+    def set(self, value):
+        with self._lock:
+            result = self._value
+            self._value = value
+        return result
+    
 class _Hook(Thread):
     
     def __init__(self):
@@ -29,33 +44,31 @@ class _Hook(Thread):
         self.start()
         
     def run(self):
-        self.callback = LOWLEVELMOUSEPROC(self.lowLevelMouseProc)
-        self.handle = ctypes.windll.user32.SetWindowsHookExA(WH_MOUSE_LL, self.callback, 0, 0)
-        if self.handle:
+        self._callback = LOWLEVELMOUSEPROC(self.lowLevelMouseProc) # protect against garbage collection
+        self._handle = ctypes.windll.user32.SetWindowsHookExA(WH_MOUSE_LL, self._callback, windows.loadLibrary("user32.dll"), 0)
+        if self._handle:
             windows.pumpMessages()
         else:
-            _log.warn("Can't hook into mouse events")
+            _log.warn("Can't hook into mouse events - %s" % ctypes.WinError())
  
     def lowLevelMouseProc(self, nCode, wParam, lParam):
-        global _horizontalWheel
         if wParam==WM_MOUSEHWHEEL:
-            with _lock:
-                _horizontalWheel += ctypes.c_long( ctypes.cast(lParam, PMSLLHOOKSTRUCT)[0].mouseData).value>>16
+            _hWheel.add( ctypes.c_long( ctypes.cast(lParam, PMSLLHOOKSTRUCT)[0].mouseData).value>>16 )
+        if wParam==WM_MOUSEWHEEL:
+            _wheel.add( ctypes.c_long( ctypes.cast(lParam, PMSLLHOOKSTRUCT)[0].mouseData).value>>16 )
         return ctypes.windll.user32.CallNextHookEx(0, nCode, wParam, lParam)
 
 
 _log = logging.getLogger("mouse")
-_lock = threading.Lock()
-_horizontalWheel = 0
+_hWheel = _Atomic(0)
+_wheel = _Atomic(0)
 _hook = _Hook()
 
+def getWheel():
+    return _wheel.set(0)
     
-def getMouseHWheel():
-    global _horizontalWheel
-    with _lock:
-        result = _horizontalWheel
-        _horizontalWheel = 0
-    return result
+def getHWheel():
+    return _hWheel.set(0)
 
 def sync():
     pass

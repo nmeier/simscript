@@ -224,12 +224,12 @@ def main(argv):
         # take time                
         sync = (time.clock()+(1.0/hertz))
         
-        # pump ui events
-        if windows: windows.pumpEvents(False)
-        
+        # pump our threads messages
+        if windows: windows.pumpMessages(False)
+    
         # sync modules
         for mod in modules: mod.sync()
-    
+        
         # run script 
         if script: script.run()
         

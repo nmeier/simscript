@@ -74,12 +74,6 @@ class TrayIcon:
         win32gui.PostQuitMessage(0) 
         self._hwnd = None
        
-def pumpEvents(self, block=True):
-    if block:
-        win32gui.PumpMessages()
-    else:
-        win32gui.PumpWaitingMessages()    
-        
 def singleton():
     win32event.CreateMutex(None, False, "5ea86490-d4ec-11e1-9b23-0800200c9a66")
     return win32api.GetLastError() != winerror.ERROR_ALREADY_EXISTS
@@ -97,10 +91,13 @@ def remember(key, value):
     reg = winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, "SOFTWARE\\simscript", 0, winreg.KEY_SET_VALUE)
     winreg.SetValueEx(reg, key, 0, winreg.REG_SZ, str(value))
     winreg.CloseKey(reg)
-    
-    #QueryValue(reg, installkey) == installpath and
-    #CloseKey(reg)
-    
+
+def pumpMessages(blocking=True):
+    if blocking:
+        win32gui.PumpMessages()
+    else:
+        win32gui.PumpWaitingMessages()
+
 if __name__ == "__main__":    
     
     option = set([True])
@@ -117,7 +114,7 @@ if __name__ == "__main__":
             ]
         
     tray = TrayIcon("Test", os.path.join(os.path.dirname(__file__), 'simscript.ico'), items)
-    tray.pump()
+    pumpMessages(True)
     
         
 

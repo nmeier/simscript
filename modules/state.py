@@ -16,24 +16,32 @@ def set(key,val): #@ReservedAssignment
     __dict[key] = val
     return old
 
-def lock(key, refresh, ttl):
+def touch(key, duration):
+    """ touch a variable for given duration 
     
-    if refresh:
+    key - key to use
+    duration - duration of new value
+    
+    returns True if newly touched, False if duration==0 and expired, None if without change
+    
+    """ 
+    
+    if duration>0:
         was = key in __dict
-        __dict[key] = time.clock()+ttl
-        return True if not was else None
-
-    try:
-        expired = __dict[key] < time.clock()
-        
-        if not expired: return None
-        
-        del __dict[key]
-        
-        return False
+        __dict[key] = time.clock()+duration
+        if not was:
+            return True
+    else:
+        try:
+            expired = __dict[key] < time.clock()
+            if expired: 
+                del __dict[key]
+                return False
+        except KeyError:
+            pass
     
-    except KeyError:
-        return None
+    # no change
+    return None
 
 
 '''

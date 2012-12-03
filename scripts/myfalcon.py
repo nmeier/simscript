@@ -70,7 +70,7 @@ else:
 # combatstick button for zoom axis toggle and right pedal for custom zoom
 FREETRACK_KEY = "CONTROL SHIFT ALT F"
 ZOOMED_OUT = 1.0
-ZOOM_IN = 0.35
+ZOOM_IN = 0.50
 
 zoomButton = combatstick.getButton(ZOOM_BUTTON_IN)
 zoom = state.get("zoom")
@@ -80,7 +80,7 @@ if state.toggle("zoom-toggle", zoomButton) or zoom == None:
     state.set("zoom", zoom)
 
 
-zoom = zoom - (pedals.getAxis(1,0.25)+1)/2    
+zoom = zoom - (pedals.getAxis(1,0.1)+1)/2    
 try:
     flightData = falcon.getFlightData()
     if flightData.gearPos and flightData.vt>0: # might be taxiing w/brakes

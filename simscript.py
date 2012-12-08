@@ -203,7 +203,6 @@ def main(argv):
         
     def bbye():
         log.info("Quitting")
-        tray.close()
         global active
         active = False
         
@@ -222,34 +221,35 @@ def main(argv):
     # loop
     active = True
     while active:
-
-        # take time                
-        sync = (time.clock()+(1.0/hertz))
         
-        # pump our threads messages
-        if windows: windows.pumpMessages(False)
-    
-        # sync modules
-        for mod in modules: mod.sync()
+        try:
+            
+            # take time                
+            sync = (time.clock()+(1.0/hertz))
+            
+            # pump our threads messages
+            if windows: windows.pumpMessages(False)
         
-        # run script
-        if script: script.run()
-
-        # sync time
-        wait = sync-time.clock()
-        if wait>=0 : 
-            try:
-                time.sleep(wait)
-            except KeyboardInterrupt:
-                log.info("Interrupted")
-                active = False
-        else:
-            log.info("%s executions took longer than sync frequency (%dms>%dms)" % ( script, (1.0/hertz-wait)*1000, 1.0/hertz*1000))
+            # sync modules
+            for mod in modules: mod.sync()
+            
+            # run script
+            if script: script.run()
         
-    # Done            
-    log.info("Exiting")
+            # sync time
+            wait = sync-time.clock()
+            if wait>=0 : 
+                    time.sleep(wait)
+            else:
+                log.info("%s executions took longer than sync frequency (%dms>%dms)" % ( script, (1.0/hertz-wait)*1000, 1.0/hertz*1000))
                 
-    # cleanup 
+        except KeyboardInterrupt:
+            log.info("Interrupted")
+            active = False
+        
+    # Cleanup
+    log.info("Exiting")
+    tray.close()
     logfile.hide()
                 
     # done

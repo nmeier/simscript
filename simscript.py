@@ -114,6 +114,8 @@ class LoggerAsStream:
                 self._buffer = ''
             else:
                 self._buffer += line
+    def flush(self):
+        pass
             
 def main(argv):
 
@@ -230,15 +232,22 @@ def main(argv):
         # sync modules
         for mod in modules: mod.sync()
         
-        # run script 
+        # run script
         if script: script.run()
-        
+
         # sync time
         wait = sync-time.clock()
         if wait>=0 : 
-            time.sleep(wait)
+            try:
+                time.sleep(wait)
+            except KeyboardInterrupt:
+                log.info("Interrupted")
+                active = False
         else:
             log.info("%s executions took longer than sync frequency (%dms>%dms)" % ( script, (1.0/hertz-wait)*1000, 1.0/hertz*1000))
+        
+    # Done            
+    log.info("Exiting")
                 
     # cleanup 
     logfile.hide()

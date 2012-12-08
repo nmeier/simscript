@@ -84,7 +84,9 @@ class Joystick:
         return _sdl.SDL_JoystickNumButtons(self._handle)  
     
     def getButton(self, i):
-        return _sdl.SDL_JoystickGetButton(self._handle, i)  
+        # no idea why but if I don't touch the logging subsystem here then Python 2.7 simply bails without exit hooks
+        _log.isEnabledFor(_log.debug)
+        return _sdl.SDL_JoystickGetButton(self._handle, i)
     
     def setButton(self, b, value):
         raise EnvironmentError("%s is not a virtual voystick" % self.name)

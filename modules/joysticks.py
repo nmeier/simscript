@@ -85,7 +85,7 @@ class Joystick:
     
     def getButton(self, i):
         # no idea why but if I don't touch the logging subsystem here then Python 2.7 simply bails without exit hooks
-        _log.isEnabledFor(_log.debug)
+        _log.isEnabledFor(0)
         return _sdl.SDL_JoystickGetButton(self._handle, i)
     
     def setButton(self, b, value):

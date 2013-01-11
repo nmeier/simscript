@@ -107,15 +107,13 @@ if pttButton != state.set("pttButton", pttButton):
     if pttButton: keyboard.press(TEAMSPEAK_KEY)
     else: keyboard.release(TEAMSPEAK_KEY)
 
-# encoder 1 for two axis (one rotation) w/push selector
+# encoder 1 for two axis parallel output 
 encoder = phidgets.get(82141)
 
-if not encoder.getInputState(0):
-    vjoy.setAxis(RADAR_ELEVATION_AXIS_OUT, -phidgets.getAxis(encoder, "radar-elevation", 3, 0.0))
-else:
-    vjoy.setAxis(RANGE_AXIS_OUT, phidgets.getAxis(encoder, "range", 1, 0.0))
+vjoy.setAxis(RADAR_ELEVATION_AXIS_OUT, -phidgets.getAxis(encoder, "radar-elevation", 3, 0.0))
+vjoy.setAxis(RANGE_AXIS_OUT, phidgets.getAxis(encoder, "range", 1, 0.0))
     
-# encoder 2 for axis (one rotation) and button 
+# encoder 2 for axis and button 
 encoder = phidgets.get(82081)
 
 vjoy.setAxis(MSL_VOLUME_AXIS_OUT, phidgets.getAxis(encoder, "msl-volume", 1, 1.0))

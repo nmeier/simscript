@@ -1,4 +1,4 @@
-import distutils.core, shutil, os, py2exe, subprocess, os, re
+import distutils.core, shutil, os, py2exe, subprocess, os, re, platform
 
 
 ' grep imports from first line of python files in given folder '
@@ -29,8 +29,10 @@ except:
     svnversion = svnversion.replace(':', '-')
     print("Source @ modified revision %s" % svnversion)
     
+arch = platform.architecture()[0]
+
 # clean up
-shutil.rmtree('build', True)
+shutil.rmtree(os.path.join("build", arch), True)
 
 # calculate extra files
 def make_data_files(roots):
@@ -49,10 +51,10 @@ def make_data_files(roots):
             data.append( ('', [root]) )
     return data
 
-
+dist = os.path.join("build", arch , "dist")
 
 options = {
-  "dist_dir": "build/dist",
+  "dist_dir": dist,
   "includes": grepimports('modules'), 
   "excludes" : [],
   "dll_excludes": ["w9xpopen.exe"], 
@@ -66,4 +68,4 @@ tail = {'script':'tail.py'}
  
 distutils.core.setup(console=[tail], windows=[simscript], options={'py2exe' :options}, data_files=data_files)
 
-shutil.make_archive('build/simscript-r%s' % svnversion, 'zip', 'build/dist', '.')
+shutil.make_archive('build/simscript-%s-r%s' % (arch, svnversion), 'zip', dist, '.')

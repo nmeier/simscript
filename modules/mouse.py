@@ -70,5 +70,8 @@ def getWheel():
 def getHWheel():
     return _hWheel.set(0)
 
+def swapMouseButtons(leftIsRight):
+    return ctypes.windll.user32.SwapMouseButton(leftIsRight)
+
 def sync():
     pass

@@ -215,6 +215,21 @@ def main(argv):
         for handle in filter(lambda n: n.endswith('.py'), os.listdir("scripts")):
             actions.append( (handle, None, script and os.path.basename(script.file)==handle, lambda f=handle: switch(f)) )
         return actions
+
+    def sync(mod):
+        try:
+            method = mod.sync
+        except AttributeError:
+            return
+        method()
+
+    def exit(mod):
+        try:
+            method = mod.exit
+        except AttributeError:
+            return
+        method()
+        
     
     tray = windows.TrayIcon("SimScript", os.path.abspath('simscript.ico'), actions) if windows else None
 
@@ -225,23 +240,24 @@ def main(argv):
         try:
             
             # take time                
-            sync = (time.clock()+(1.0/hertz))
+            next = (time.clock()+(1.0/hertz))
             
             # pump our threads messages
             if windows: windows.pumpMessages(False)
         
             # sync modules
-            for mod in modules: mod.sync()
+            for mod in modules:
+                sync(mod)
             
             # run script
             if script: script.run()
         
-            # sync time
-            wait = sync-time.clock()
+            # check time
+            wait = next-time.clock()
             if wait>=0 : 
                     time.sleep(wait)
             else:
-                log.info("%s executions took longer than sync frequency (%dms>%dms)" % ( script, (1.0/hertz-wait)*1000, 1.0/hertz*1000))
+                log.info("%s executions took longer than next frequency (%dms>%dms)" % ( script, (1.0/hertz-wait)*1000, 1.0/hertz*1000))
                 
         except KeyboardInterrupt:
             log.info("Interrupted")
@@ -249,6 +265,8 @@ def main(argv):
         
     # Cleanup
     log.info("Exiting")
+    for mod in modules:
+        exit(mod) 
     tray.close()
     logfile.hide()
                 

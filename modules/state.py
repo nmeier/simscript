@@ -84,9 +84,6 @@ def _init():
     __dict = dict()
     __holds = dict()
 
-def sync():
-    pass
-
 _init()
 
 

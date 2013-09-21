@@ -19,5 +19,3 @@ def log(level, *args):
         frm = frm.f_back
     logging.getLogger(name).log(level, *args)
 
-def sync():
-    pass

@@ -63,15 +63,26 @@ _log = logging.getLogger("mouse")
 _hWheel = _Atomic(0)
 _wheel = _Atomic(0)
 _hook = _Hook()
+_mouseSwapped = False
 
+''' returns current vertical mouse wheel position '''
 def getWheel():
     return _wheel.set(0)
     
+''' returns current horizontal mouse wheel position '''
 def getHWheel():
     return _hWheel.set(0)
 
-def swapMouseButtons(leftIsRight):
-    return ctypes.windll.user32.SwapMouseButton(leftIsRight)
+''' swaps left and right mouse button for one cycle '''
+def swapMouseButtons():
+    global _mouseSwapped
+    _mouseSwapped = True
 
 def sync():
-    pass
+    global _mouseSwapped
+    ctypes.windll.user32.SwapMouseButton(_mouseSwapped)
+    _mouseSwapped = False
+
+def exit():
+    ctypes.windll.user32.SwapMouseButton(False)
+    

@@ -14,7 +14,7 @@
 #   Map Push Button into Button (Missile Uncage)
 #   Map Rotation into Axis (Missile Acquisition Sound Level)
 #
-import joysticks, phidgets, state, log, keyboard, falcon, time
+import joysticks, phidgets, state, log, keyboard, falcon, time, mouse
 
 # Throttle Quadrant
 CURSOR_WE_AXIS_OUT = 0
@@ -44,7 +44,6 @@ OVERRIDE_DOWN_BUTTON_IN = 1 # in
 OVERRIDE_MRM_BUTTON_OUT = 6
 OVERRIDE_DOG_BUTTON_OUT = 7
 OVERRIDE_HOLD_SECONDS = 0.1
-
 
 # sticks
 vjoy = joysticks.get('vJoy Device')
@@ -85,6 +84,9 @@ try:
     flightData = falcon.getFlightData()
     if flightData.gearPos and flightData.vt>0: # might be taxiing w/brakes
         zoom = state.get("zoom")
+    
+    # if we're in Falcon we assume left handed mouse
+    mouse.swapMouseButtons()
 except:
     pass
     

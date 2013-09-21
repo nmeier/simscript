@@ -101,9 +101,6 @@ _pFlightData = None
 _pFlightData2 = None
 _pOSBData = None
 
-def sync(): 
-    pass
-
 def getFlightData():
     
     global _pFlightData

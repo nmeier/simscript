@@ -227,8 +227,6 @@ def isDown(c):
 def isToggled(c):
     return bool(ctypes.windll.user32.GetKeyState(c) & 0x0001)    
 
-def sync():
-    pass
 
 
 

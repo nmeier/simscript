@@ -158,8 +158,8 @@ def _init():
     # now try to load SimConnect.dll        
     try:
         _dll = ctypes.oledll.SimConnect
-    except: 
-        raise EnvironmentError("Cannot initialize DLL for FSX SimConnect")
+    except Exception as e: 
+        raise EnvironmentError("Cannot initialize DLL for FSX SimConnect (%s)" % e)
     
 def bcd2int(bcd):
     bcd = int(bcd)
